@@ -1,31 +1,92 @@
-"""
-Runs evaluation of SAM on the validation set of COCO Val 2017
-
-COCO data setup:
-1. go here: https://cocodataset.org/#download
-2. download 2017 Val images
-3. download 2017 Train/Val annotations
-4. unzip everything and put in {coco_root_dir}
-
-SAM checkpoint setup:
-1. go here: https://github.com/facebookresearch/segment-anything/tree/main#model-checkpoints
-2. download all the checkpoints to a directory
-3. pass in that directory via {sam_checkpoint_base_path}
-"""
-
-# this was adapted from https://www.internalfb.com/intern/anp/view/?kernel=default&id=3976727
-
-
 # for now, speed up point calculation with diskcache
 # depending on requirements of our eval, this may have to change in the future
-import fire
+import diskcache
+import tqdm
+import functools
 
 import torch
+import fire
+from metrics import calculate_miou, create_result_entry
+from data import build_data, setup_coco_img_ids
+from quant import apply_dynamic_quant
+
 from segment_anything import sam_model_registry, SamPredictor
 
-from eval import do_eval
-
 torch._dynamo.config.cache_size_limit = 5000
+
+
+def build_results(batched_data_iter,
+                  predictor,
+                  mask_debug_out_dir,
+                  batch_size,
+                  time_per_batch,
+                  compile_create_top_score_ious):
+
+    results = []
+    encoder = predictor.model.image_encoder
+    batch_ms = []
+    for Is, coords_lists, coords_lists_sizes, gt_masks_lists, annss, xs, predictor_input_sizes, img_idxs, coords_offsets, gt_masks_sizes, gt_masks_offsets in tqdm.tqdm(batched_data_iter):
+        if coords_lists is None:
+            continue
+        if time_per_batch:
+            torch.cuda.synchronize()
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+            start_event.record()
+
+        input_image_batch = xs.to(device=predictor.device, non_blocking=True)
+        input_pointss = coords_lists.to(
+            device=predictor.device, non_blocking=True)
+        gt_masks_lists = gt_masks_lists.to(
+            device=predictor.device, non_blocking=True)
+
+        with torch.no_grad():
+            features_batch = encoder(input_image_batch)
+
+        for batch_idx in range(len(Is)):
+            features = features_batch.narrow(0, batch_idx, 1)
+            predictor_input_size = predictor_input_sizes[batch_idx]
+            image = Is[batch_idx]
+            img_idx = img_idxs[batch_idx]
+
+            predictor.reset_image()
+            predictor.original_size = image.shape[:2]
+            # tuple(input_image.shape[-2:])
+            predictor.input_size = predictor_input_size
+            predictor.features = features
+            predictor.is_image_set = True
+
+            input_points = input_pointss[coords_offsets[batch_idx]
+                :coords_offsets[batch_idx+1]].view(coords_lists_sizes[batch_idx])
+
+            input_points = input_points.unsqueeze(1)
+            num_points = len(input_points)
+
+            fg_labels = torch.ones(
+                (num_points, 1), dtype=torch.int, device=predictor.device)
+
+            # TODO: Break this up further to batch more computation.
+            masks, scores, logits = predictor.predict_torch(
+                point_coords=input_points,
+                point_labels=fg_labels,
+                multimask_output=True,
+            )
+            argmax_scores = torch.argmax(scores, dim=1)
+            inference_masks = masks.gather(1, argmax_scores.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand(
+                (masks.size(0), 1, masks.size(2), masks.size(3)))).squeeze(1)
+            gt_masks_list = gt_masks_lists[gt_masks_offsets[batch_idx]:gt_masks_offsets[batch_idx+1]].view(gt_masks_sizes[batch_idx])
+            results += create_result_entry(annss[batch_idx], gt_masks_list, inference_masks, img_idx)
+
+
+        if time_per_batch:
+            end_event.record()
+            torch.cuda.synchronize()
+            batch_ms.append(start_event.elapsed_time(end_event))
+
+
+    if time_per_batch:
+        return results, batch_ms
+    return results
 
 
 def run_do_eval_with_profile(*args, **kwargs):
@@ -47,6 +108,7 @@ def run_do_eval_with_profile(*args, **kwargs):
         f.write(ppp)
     print("3")
     return result
+
 
 def run(
     coco_root_dir,
@@ -102,12 +164,6 @@ def run(
         assert use_half
         # assert use_compile_max_autotune
         assert not use_compile_decoder
-        import sys
-        import os
-        # smoothquant_path = '/'.join(os.getcwd().split('/')[:-1] + \
-        #     ['ao_benchmarks/experimental/smoothquant'])
-        # sys.path.insert(1, smoothquant_path)
-        from quant import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
         from torch._inductor import config as tritonconfig
         tritonconfig.triton.unique_kernel_names = True
@@ -117,36 +173,81 @@ def run(
 
     if use_compile:
         assert not use_compile_max_autotune
-        predictor.model.image_encoder = torch.compile(predictor.model.image_encoder)
+        predictor.model.image_encoder = torch.compile(
+            predictor.model.image_encoder)
 
     if use_compile_max_autotune:
         assert not use_compile
-        predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode="max-autotune-no-cudagraphs")
+        predictor.model.image_encoder = torch.compile(
+            predictor.model.image_encoder, mode="max-autotune-no-cudagraphs")
         # predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode="max-autotune")
 
     # limit = batch_size # 20
     # metrics = run_do_eval_with_profile(
-    metrics = do_eval(
-        predictor, coco_root_dir, coco_slice_name, coco_category_names,
-        point_sampling_cache_dir, mask_debug_out_dir, limit, img_id,
-        batch_size=batch_size, report_batch_timings=True, silent=True,
-        num_workers=num_workers, use_half=use_half, save_inference_masks=False,
-        compile_create_top_score_ious=use_compile_decoder, use_half_decoder=use_half_decoder)
-    batch_ms = metrics['batch_ms']
-    results_df = metrics['results_df']
+
+    compile_create_top_score_ious = use_compile_decoder
+    report_batch_timings = True
+    silent = True
+
+    cache = diskcache.Cache(point_sampling_cache_dir)
+    # make sure you clear the cache if you change the point sampling algorithm
+    # cache.clear()
+
+    coco_img_ids, cat_id_to_cat, catIds, coco = setup_coco_img_ids(
+        coco_root_dir, coco_slice_name, coco_category_names, img_id)
+    if not silent:
+        print('catIds', catIds)
+    if not silent:
+        print('total images', len(coco_img_ids))
+
+    build_batch = build_data(coco_img_ids,
+                             coco,
+                             catIds,
+                             coco_root_dir,
+                             coco_slice_name,
+                             cache,
+                             predictor,
+                             use_half,
+                             use_half_decoder)
+
+    limit = len(coco_img_ids) if limit is None else limit
+    batched_data_iter = torch.utils.data.DataLoader(list(range(limit)),
+                                                    batch_size=batch_size,
+                                                    collate_fn=build_batch,
+                                                    num_workers=num_workers,
+                                                    pin_memory=True)
+    if not silent:
+        print('data built with num_workers: ', num_workers)
+
+    results = build_results(batched_data_iter,
+                            predictor,
+                            mask_debug_out_dir,
+                            batch_size,
+                            report_batch_timings,
+                            compile_create_top_score_ious)
+    if report_batch_timings:
+        results, batch_ms = results
+        batch_ms = torch.tensor(batch_ms)
+        batch_ms_min = batch_ms.min().item()
+        batch_ms_max = batch_ms.min().item()
+        if not silent:
+            print("batch_ms_min: ", batch_ms_min)
+            print("batch_ms_max: ", batch_ms_max)
+
+    results = [[r[0], r[1], r[2], r[3].item()] for r in results]
 
     batch_ms_p50 = batch_ms.quantile(0.5, interpolation='nearest').item()
     ms_per_img = (batch_ms_p50 / batch_size)
     img_s = 1000 / ms_per_img
-    mIoU = results_df['iou'].agg(['mean', 'count'])['mean']
+
+    mIoU = calculate_miou(results, mask_debug_out_dir, silent, cat_id_to_cat)
     max_memory_allocated = torch.cuda.max_memory_allocated()
+
     if print_header:
-        print(",".join(["sam_model_type", "batch_size", "max_memory_allocated", "img_s", "mIoU", "use_compile", "use_half", "use_quantize", "use_half_decoder", "use_compile_decoder", "use_cudagraph_trees", "num_workers"]))
-    print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated, img_s, mIoU, use_compile, use_half, use_quantize, use_half_decoder, use_compile_decoder, use_cudagraph_trees, num_workers])))
-    # from torch._inductor import config
-    # print(
-    #         "torch._inductor.config.epilogue_fusion: ",
-    #         torch._inductor.config.epilogue_fusion)
+        print(",".join(["sam_model_type", "batch_size", "max_memory_allocated", "img_s", "mIoU", "use_compile",
+              "use_half", "use_quantize", "use_half_decoder", "use_compile_decoder", "use_cudagraph_trees", "num_workers"]))
+    print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated, img_s, mIoU, use_compile,
+          use_half, use_quantize, use_half_decoder, use_compile_decoder, use_cudagraph_trees, num_workers])))
 
 
 if __name__ == '__main__':

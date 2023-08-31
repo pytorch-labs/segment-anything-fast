@@ -219,3 +219,34 @@ def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, cache
         return batch
 
     return build_batch
+
+
+def setup_coco_img_ids(coco_root_dir, coco_slice_name, coco_category_names, img_id):
+    annFile = '{}/annotations/instances_{}.json'.format(
+        coco_root_dir, coco_slice_name)
+
+    # initialize COCO api for instance annotations
+    coco = COCO(annFile)
+
+    # display COCO categories and supercategories
+    cats = coco.loadCats(coco.getCatIds())
+    cat_id_to_cat = {cat['id']: cat for cat in cats}
+    nms = [cat['name'] for cat in cats]
+    # print('COCO categories: \n{}\n'.format(' '.join(nms)))
+
+    # nms = set([cat['supercategory'] for cat in cats])
+    # print('COCO supercategories: \n{}'.format(' '.join(nms)))
+
+    if coco_category_names is not None:
+        catIds = coco.getCatIds(catNms=coco_category_names)
+    else:
+        catIds = coco.getCatIds()
+
+    if img_id is not None:
+        coco_img_ids = [img_id]
+    elif coco_category_names is None:
+        coco_img_ids = coco.getImgIds()
+    else:
+        coco_img_ids = coco.getImgIds(catIds=catIds)
+
+    return coco_img_ids, cat_id_to_cat, catIds, coco
