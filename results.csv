@@ -1,3 +1,4 @@
+idx,time,sam_commit_name,sam_model_type,batch_size,max_memory_allocated,img_s,mIoU,use_compile,use_half,use_quantize,use_half_decoder,use_compile_decoder,use_cudagraph_trees,num_workers
 012,8.201871995131174,default,vit_b,20,51632330240,10.795935340887063,0.5335529600818258,False,False,False,False,False,True,32
 013,9.12189153432846,default,vit_b,20,41072085504,11.595542057619879,0.5335541124828783,True,False,False,False,False,True,32
 014,8.532247642676035,graphbreaks,vit_b,20,40920489472,11.617149959438533,0.5335541124828783,True,False,False,False,False,True,32
