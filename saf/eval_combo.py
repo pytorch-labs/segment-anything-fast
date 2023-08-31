@@ -16,7 +16,13 @@ def unbind_jagged(device, data, sizes, offsets):
     return [data[offsets[batch_idx]:offsets[batch_idx+1]].view(sizes[batch_idx]) for batch_idx in range(len(sizes))]
 
 
-def build_results_batch(predictor, batch):
+def pad_to_batch_size(batch, batch_size):
+    if batch.size(0) < batch_size:
+        return torch.cat([batch, batch[:(batch_size - batch.size(0))]], dim=0)
+    return batch
+
+
+def build_results_batch(predictor, batch, batch_size):
     encoder = predictor.model.image_encoder
     device = predictor.device
 
@@ -28,7 +34,8 @@ def build_results_batch(predictor, batch):
     gt_masks_lists = unbind_jagged(*([device] + batch[4:7]))
     if coords_lists is None:
         return None
-    features_batch = encoder(input_image_batch)
+    features_batch = encoder(pad_to_batch_size(input_image_batch, batch_size))
+    features_batch = features_batch[:input_image_batch.size(0)]
     datapoints = zip(*(batch[7:] + [coords_lists, gt_masks_lists]))
 
     result_batch = []
@@ -48,7 +55,8 @@ def build_results_batch(predictor, batch):
             point_labels=fg_labels,
             multimask_output=True,
         )
-        result_batch += create_result_entry(anns, gt_masks, masks, scores, idx)
+        entry = create_result_entry(anns, gt_masks, masks, scores, idx)
+        result_batch += entry
     return result_batch
 
 
@@ -56,6 +64,7 @@ def build_results(batched_data_iter,
                   predictor,
                   mask_debug_out_dir,
                   batch_size,
+                  use_compile,
                   use_compile_decoder):
 
     # TODO: Re-enable this for datapoints
@@ -63,6 +72,7 @@ def build_results(batched_data_iter,
 
     results = []
     batch_ms = []
+    batch_idx = 0
     for batch in tqdm.tqdm(batched_data_iter):
         torch.cuda.synchronize()
         start_event = torch.cuda.Event(enable_timing=True)
@@ -70,13 +80,22 @@ def build_results(batched_data_iter,
         start_event.record()
 
         with torch.no_grad():
-            result_batch = build_results_batch(predictor, batch)
+            if batch_idx == 0:
+                result_batch = build_results_batch(
+                    predictor, batch, batch_size)
+                torch.cuda.synchronize()
+                if use_compile != "False":
+                    predictor.model.image_encoder = torch.compile(
+                        predictor.model.image_encoder, mode=use_compile)
+                torch.cuda.reset_peak_memory_stats()
+            result_batch = build_results_batch(predictor, batch, batch_size)
             if result_batch is not None:
                 results += result_batch
 
         end_event.record()
         torch.cuda.synchronize()
         batch_ms.append(start_event.elapsed_time(end_event))
+        batch_idx += 1
 
     return results, torch.tensor(batch_ms)
 
@@ -95,16 +114,11 @@ def run(
     img_id=None,
     use_half=False,
     use_half_decoder=False,
-    use_compile=False,
-    use_compile_max_autotune=False,
+    use_compile="False",
     use_compile_decoder=False,
     use_quantize=False,
     num_workers=0,
-    use_cudagraph_trees=True
 ):
-    if not use_cudagraph_trees:
-        from torch._inductor import config as tritonconfig
-        tritonconfig.triton.cudagraph_trees = False
 
     # https://github.com/facebookresearch/segment-anything/tree/main#model-checkpoints
     # largest to smallest: vit_h, vit_l, vit_b
@@ -133,18 +147,8 @@ def run(
     if use_quantize:
         apply_dynamic_quant(predictor.model.image_encoder)
         from torch._inductor import config as tritonconfig
-        tritonconfig.triton.unique_kernel_names = True
-        tritonconfig.epilogue_fusion_first = True
-
-    if use_compile:
-        assert not use_compile_max_autotune
-        predictor.model.image_encoder = torch.compile(
-            predictor.model.image_encoder)
-
-    if use_compile_max_autotune:
-        assert not use_compile
-        predictor.model.image_encoder = torch.compile(
-            predictor.model.image_encoder, mode="max-autotune-no-cudagraphs")
+        # tritonconfig.triton.unique_kernel_names = True
+        # tritonconfig.epilogue_fusion_first = True
 
     coco_img_ids, cat_id_to_cat, catIds, coco = setup_coco_img_ids(
         coco_root_dir, coco_slice_name, coco_category_names, img_id)
@@ -169,6 +173,7 @@ def run(
                                       predictor,
                                       mask_debug_out_dir,
                                       batch_size,
+                                      use_compile,
                                       use_compile_decoder)
 
     results = [[r[0], r[1], r[2], r[3].item()] for r in results]
@@ -182,9 +187,9 @@ def run(
 
     if print_header:
         print(",".join(["sam_model_type", "batch_size", "max_memory_allocated", "img_s", "mIoU", "use_compile",
-              "use_half", "use_quantize", "use_half_decoder", "use_compile_decoder", "use_cudagraph_trees", "num_workers"]))
+              "use_half", "use_quantize", "use_half_decoder", "use_compile_decoder", "num_workers"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated, img_s, mIoU, use_compile,
-          use_half, use_quantize, use_half_decoder, use_compile_decoder, use_cudagraph_trees, num_workers])))
+          use_half, use_quantize, use_half_decoder, use_compile_decoder, num_workers])))
 
 
 if __name__ == '__main__':
