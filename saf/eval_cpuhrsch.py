@@ -73,12 +73,6 @@ def run_experiment(idx, sam_commit_name, model_type, batch_size, num_workers, us
         print("idx,time,sam_commit_name," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
-run_experiment("018", "sdpa",        "vit_b", 60, 32, use_half=True,  use_compile=True, capture_output=False)
-# run_experiment("020", "sdpa",        "vit_b", 60, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True"], capture_output=False)
-
-# run_experiment("020", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "False", "--use_compile_decoder", "False", "--use_quantize", "True"], capture_output=False)
-import sys; sys.exit(0)
-
 run_experiment("010", "default",     "vit_b",  1,  0, use_half=False, use_compile=False, print_header=True)
 run_experiment("011", "default",     "vit_b",  1, 32, use_half=False, use_compile=False)
 run_experiment("012", "default",     "vit_b", 20, 32, use_half=False, use_compile=False)
@@ -92,7 +86,7 @@ run_experiment("019", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compil
 run_experiment("020", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True"])
 run_experiment("021", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=True,   extra_args=["--use_quantize", "True"])
 
-run_experiment("110", "default",     "vit_h",  1,  0, use_half=False, use_compile=False, print_header=True)
+run_experiment("110", "default",     "vit_h",  1,  0, use_half=False, use_compile=False)
 run_experiment("111", "default",     "vit_h",  1, 32, use_half=False, use_compile=False)
 run_experiment("112", "default",     "vit_h",  5, 32, use_half=False, use_compile=False)
 run_experiment("113", "default",     "vit_h",  5, 32, use_half=False, use_compile=True)
