@@ -9,7 +9,7 @@ python_path = os.path.join(
     home, "miniconda3/envs/pytorch-3.10-source/bin/python")
 
 script_path = os.path.join(
-    home, "dev/segment-anything-fast/eval_combo.py")
+    home, "dev/segment-anything-fast/saf/eval_combo.py")
 
 sam_path = os.path.join(home, "dev/segment-anything")
 sam_commits = {
@@ -73,8 +73,8 @@ def run_experiment(idx, sam_commit_name, model_type, batch_size, num_workers, us
         print("idx,time,sam_commit_name," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
-run_experiment("018", "sdpa",        "vit_b", 60, 32, use_half=True,  use_compile=True, capture_output=False)
-# run_experiment("020", "sdpa",        "vit_b", 60, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True"], capture_output=False)
+# run_experiment("018", "sdpa",        "vit_b", 60, 32, use_half=True,  use_compile=True, capture_output=False)
+run_experiment("020", "sdpa",        "vit_b", 60, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True"], capture_output=False)
 
 # run_experiment("020", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "False", "--use_compile_decoder", "False", "--use_quantize", "True"], capture_output=False)
 import sys; sys.exit(0)
