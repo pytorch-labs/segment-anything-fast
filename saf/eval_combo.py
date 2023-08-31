@@ -20,7 +20,10 @@ def build_results_batch(predictor, batch):
     encoder = predictor.model.image_encoder
     device = predictor.device
 
-    input_image_batch = batch[0].to(device=device, non_blocking=True)
+    input_image_batch = batch[0]
+    if input_image_batch is None:
+        return None
+    input_image_batch = input_image_batch.to(device=device, non_blocking=True)
     coords_lists = unbind_jagged(*([device] + batch[1:4]))
     gt_masks_lists = unbind_jagged(*([device] + batch[4:7]))
     if coords_lists is None:
@@ -67,7 +70,9 @@ def build_results(batched_data_iter,
         start_event.record()
 
         with torch.no_grad():
-            results += build_results_batch(predictor, batch)
+            result_batch = build_results_batch(predictor, batch)
+            if result_batch is not None:
+                results += result_batch
 
         end_event.record()
         torch.cuda.synchronize()

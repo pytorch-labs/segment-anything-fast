@@ -213,15 +213,15 @@ def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, point
             batch[9].append(predictor_input_size)
             batch[10].append(img_idx)
 
-        batch[0] = torch.cat(batch[0]) if len(batch[0]) > 0 else None
-        if use_half:
-            batch[0] = batch[0].half()
+        def cat_and_cast(b, use_half):
+            b = torch.cat(b) if len(b) > 0 else None
+            if use_half:
+                return b.half()
+            return b
 
-        batch[1] = torch.cat(batch[1]) if len(batch[0]) > 0 else None
-        if batch[1] is not None and use_half_decoder:
-            batch[1] = batch[1].half()
-
-        batch[4] = torch.cat(batch[4]) if len(batch[0]) > 0 else None
+        batch[0] = cat_and_cast(batch[0], use_half)
+        batch[1] = cat_and_cast(batch[1], use_half_decoder)
+        batch[4] = cat_and_cast(batch[4], False)
 
         return batch
 
