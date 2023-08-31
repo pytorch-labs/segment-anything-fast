@@ -1,7 +1,10 @@
 import torch
 import pandas as pd
 
-def create_result_entry(anns, gt_masks_list, inference_masks, img_idx):
+def create_result_entry(anns, gt_masks_list, masks, scores, img_idx):
+    argmax_scores = torch.argmax(scores, dim=1)
+    inference_masks = masks.gather(1, argmax_scores.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand(
+        (masks.size(0), 1, masks.size(2), masks.size(3)))).squeeze(1)
 
     def _iou(mask1, mask2):
         assert mask1.dim() == 3

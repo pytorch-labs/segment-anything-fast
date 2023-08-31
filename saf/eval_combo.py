@@ -2,7 +2,6 @@
 # depending on requirements of our eval, this may have to change in the future
 import diskcache
 import tqdm
-import functools
 
 import torch
 import fire
@@ -14,12 +13,14 @@ from segment_anything import sam_model_registry, SamPredictor
 
 torch._dynamo.config.cache_size_limit = 5000
 
+def unbind_jagged(data, offsets, sizes):
+    return [data[offsets[batch_idx]:offsets[batch_idx+1]].view(sizes[batch_idx]) for batch_idx in range(len(sizes))]
+
 
 def build_results(batched_data_iter,
                   predictor,
                   mask_debug_out_dir,
                   batch_size,
-                  time_per_batch,
                   compile_create_top_score_ious):
 
     results = []
@@ -28,11 +29,11 @@ def build_results(batched_data_iter,
     for Is, coords_lists, coords_lists_sizes, gt_masks_lists, annss, xs, predictor_input_sizes, img_idxs, coords_offsets, gt_masks_sizes, gt_masks_offsets in tqdm.tqdm(batched_data_iter):
         if coords_lists is None:
             continue
-        if time_per_batch:
-            torch.cuda.synchronize()
-            start_event = torch.cuda.Event(enable_timing=True)
-            end_event = torch.cuda.Event(enable_timing=True)
-            start_event.record()
+
+        torch.cuda.synchronize()
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
 
         input_image_batch = xs.to(device=predictor.device, non_blocking=True)
         input_pointss = coords_lists.to(
@@ -43,7 +44,10 @@ def build_results(batched_data_iter,
         with torch.no_grad():
             features_batch = encoder(input_image_batch)
 
-        for batch_idx in range(len(Is)):
+        input_pointss = unbind_jagged(input_pointss, coords_offsets, coords_lists_sizes)
+        gt_masks_lists = unbind_jagged(gt_masks_lists, gt_masks_offsets, gt_masks_sizes)
+
+        for batch_idx, (input_points, gt_masks_list) in enumerate(zip(input_pointss, gt_masks_lists)):
             features = features_batch.narrow(0, batch_idx, 1)
             predictor_input_size = predictor_input_sizes[batch_idx]
             image = Is[batch_idx]
@@ -55,9 +59,6 @@ def build_results(batched_data_iter,
             predictor.input_size = predictor_input_size
             predictor.features = features
             predictor.is_image_set = True
-
-            input_points = input_pointss[coords_offsets[batch_idx]
-                :coords_offsets[batch_idx+1]].view(coords_lists_sizes[batch_idx])
 
             input_points = input_points.unsqueeze(1)
             num_points = len(input_points)
@@ -71,22 +72,15 @@ def build_results(batched_data_iter,
                 point_labels=fg_labels,
                 multimask_output=True,
             )
-            argmax_scores = torch.argmax(scores, dim=1)
-            inference_masks = masks.gather(1, argmax_scores.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand(
-                (masks.size(0), 1, masks.size(2), masks.size(3)))).squeeze(1)
-            gt_masks_list = gt_masks_lists[gt_masks_offsets[batch_idx]:gt_masks_offsets[batch_idx+1]].view(gt_masks_sizes[batch_idx])
-            results += create_result_entry(annss[batch_idx], gt_masks_list, inference_masks, img_idx)
+            results += create_result_entry(annss[batch_idx], gt_masks_list, masks, scores, img_idx)
 
 
-        if time_per_batch:
-            end_event.record()
-            torch.cuda.synchronize()
-            batch_ms.append(start_event.elapsed_time(end_event))
+        end_event.record()
+        torch.cuda.synchronize()
+        batch_ms.append(start_event.elapsed_time(end_event))
 
 
-    if time_per_batch:
-        return results, batch_ms
-    return results
+    return results, torch.tensor(batch_ms)
 
 
 def run_do_eval_with_profile(*args, **kwargs):
@@ -186,7 +180,6 @@ def run(
     # metrics = run_do_eval_with_profile(
 
     compile_create_top_score_ious = use_compile_decoder
-    report_batch_timings = True
     silent = True
 
     cache = diskcache.Cache(point_sampling_cache_dir)
@@ -195,10 +188,6 @@ def run(
 
     coco_img_ids, cat_id_to_cat, catIds, coco = setup_coco_img_ids(
         coco_root_dir, coco_slice_name, coco_category_names, img_id)
-    if not silent:
-        print('catIds', catIds)
-    if not silent:
-        print('total images', len(coco_img_ids))
 
     build_batch = build_data(coco_img_ids,
                              coco,
@@ -216,23 +205,11 @@ def run(
                                                     collate_fn=build_batch,
                                                     num_workers=num_workers,
                                                     pin_memory=True)
-    if not silent:
-        print('data built with num_workers: ', num_workers)
-
-    results = build_results(batched_data_iter,
-                            predictor,
-                            mask_debug_out_dir,
-                            batch_size,
-                            report_batch_timings,
-                            compile_create_top_score_ious)
-    if report_batch_timings:
-        results, batch_ms = results
-        batch_ms = torch.tensor(batch_ms)
-        batch_ms_min = batch_ms.min().item()
-        batch_ms_max = batch_ms.min().item()
-        if not silent:
-            print("batch_ms_min: ", batch_ms_min)
-            print("batch_ms_max: ", batch_ms_max)
+    results, batch_ms = build_results(batched_data_iter,
+                                      predictor,
+                                      mask_debug_out_dir,
+                                      batch_size,
+                                      compile_create_top_score_ious)
 
     results = [[r[0], r[1], r[2], r[3].item()] for r in results]
 
