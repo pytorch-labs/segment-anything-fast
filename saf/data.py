@@ -175,8 +175,8 @@ def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, cache
 
     def build_batch(indicies):
         batch = [[], [], [], [], [], [], [], [], [], [], []]
-        batch[8] = [0]
-        batch[10] = [0]
+        batch[3] = [0]
+        batch[6] = [0]
         for img_idx in indicies:
             imgId = coco_img_ids[img_idx]
 
@@ -195,27 +195,30 @@ def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, cache
             coords_list = predictor.transform.apply_coords(
                 np.array(coords_list), I.shape[:2])
             coords_list = torch.tensor(coords_list, dtype=torch.float)
+
             batch[1].append(coords_list.reshape(-1))
             batch[2].append(coords_list.size())
-            batch[3].append(gt_masks_list.reshape(-1))
-            batch[4].append(anns)
-            batch[5].append(x)
-            batch[6].append(predictor_input_size)
-            batch[7].append(img_idx)
-            batch[8].append(coords_list.numel() + batch[8][-1])
-            batch[9].append(gt_masks_list.size())
-            batch[10].append(gt_masks_list.numel() + batch[10][-1])
-        if use_half_decoder:
-            batch[1] = torch.cat(batch[1]).half() if len(
-                batch[0]) > 0 else None
-        else:
-            batch[1] = torch.cat(batch[1]) if len(batch[0]) > 0 else None
-        batch[3] = torch.cat(batch[3]) if len(batch[0]) > 0 else None
+            batch[3].append(coords_list.numel() + batch[3][-1])
+
+            batch[4].append(gt_masks_list.reshape(-1))
+            batch[5].append(gt_masks_list.size())
+            batch[6].append(gt_masks_list.numel() + batch[6][-1])
+
+            batch[7].append(anns)
+            batch[8].append(x)
+            batch[9].append(predictor_input_size)
+            batch[10].append(img_idx)
+
+        batch[1] = torch.cat(batch[1]) if len(batch[0]) > 0 else None
+        if batch[1] is not None and use_half_decoder:
+            batch[1] = batch[1].half()
+
+        batch[4] = torch.cat(batch[4]) if len(batch[0]) > 0 else None
+
+        batch[8] = torch.cat(batch[8]) if len(batch[0]) > 0 else None
         if use_half:
-            batch[5] = torch.cat(batch[5]).half() if len(
-                batch[0]) > 0 else None
-        else:
-            batch[5] = torch.cat(batch[5]) if len(batch[0]) > 0 else None
+            batch[8] = batch[8].half()
+
         return batch
 
     return build_batch

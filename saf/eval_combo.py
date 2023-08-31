@@ -13,7 +13,10 @@ from segment_anything import sam_model_registry, SamPredictor
 
 torch._dynamo.config.cache_size_limit = 5000
 
-def unbind_jagged(data, offsets, sizes):
+def unbind_jagged(device, data, sizes, offsets):
+    if data is None:
+        return None
+    data = data.to(device=device, non_blocking=True)
     return [data[offsets[batch_idx]:offsets[batch_idx+1]].view(sizes[batch_idx]) for batch_idx in range(len(sizes))]
 
 
@@ -25,29 +28,27 @@ def build_results(batched_data_iter,
 
     results = []
     encoder = predictor.model.image_encoder
+    device = predictor.device
     batch_ms = []
-    for Is, coords_lists, coords_lists_sizes, gt_masks_lists, annss, xs, predictor_input_sizes, img_idxs, coords_offsets, gt_masks_sizes, gt_masks_offsets in tqdm.tqdm(batched_data_iter):
-        if coords_lists is None:
-            continue
-
+    for batch in tqdm.tqdm(batched_data_iter):
         torch.cuda.synchronize()
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
         start_event.record()
 
-        input_image_batch = xs.to(device=predictor.device, non_blocking=True)
-        input_pointss = coords_lists.to(
-            device=predictor.device, non_blocking=True)
-        gt_masks_lists = gt_masks_lists.to(
-            device=predictor.device, non_blocking=True)
+        Is = batch[0]
+        coords_lists = unbind_jagged(*([device] + batch[1:4]))
+        gt_masks_lists = unbind_jagged(*([device] + batch[4:7]))
+        annss, input_image_batch, predictor_input_sizes, img_idxs = batch[7:]
+        if coords_lists is None:
+            continue
+
+        input_image_batch = input_image_batch.to(device=device, non_blocking=True)
 
         with torch.no_grad():
             features_batch = encoder(input_image_batch)
 
-        input_pointss = unbind_jagged(input_pointss, coords_offsets, coords_lists_sizes)
-        gt_masks_lists = unbind_jagged(gt_masks_lists, gt_masks_offsets, gt_masks_sizes)
-
-        for batch_idx, (input_points, gt_masks_list) in enumerate(zip(input_pointss, gt_masks_lists)):
+        for batch_idx, (coords_list, gt_masks_list) in enumerate(zip(coords_lists, gt_masks_lists)):
             features = features_batch.narrow(0, batch_idx, 1)
             predictor_input_size = predictor_input_sizes[batch_idx]
             image = Is[batch_idx]
@@ -60,15 +61,13 @@ def build_results(batched_data_iter,
             predictor.features = features
             predictor.is_image_set = True
 
-            input_points = input_points.unsqueeze(1)
-            num_points = len(input_points)
-
+            coords_list = coords_list.unsqueeze(1)
             fg_labels = torch.ones(
-                (num_points, 1), dtype=torch.int, device=predictor.device)
+                (coords_list.size(0), 1), dtype=torch.int, device=device)
 
             # TODO: Break this up further to batch more computation.
             masks, scores, logits = predictor.predict_torch(
-                point_coords=input_points,
+                point_coords=coords_list,
                 point_labels=fg_labels,
                 multimask_output=True,
             )
