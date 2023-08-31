@@ -6,6 +6,19 @@ from typing import Tuple, Optional
 import torch
 from torch._dynamo import is_compiling as dynamo_is_compiling
 
+def quantize_activation_per_token_absmax(t):
+    n_bits = 8
+    # if the shape of t is [B, N, K], the shape of scales will be [B, N, 1]
+    # want float scales to avoid overflows
+    scales = t.abs().max(dim=-1, keepdim=True)[0].float()
+    q_max = 2 ** (n_bits - 1) - 1
+    scales.clamp_(min=1e-5).div_(q_max)
+    # Note: the original smoothquant does not clamp to qmin/qmax here,
+    # but some of the tests with bfloat16 ended up with a flipped sign
+    # if we don't clamp.  TODO(future) look into this further.
+    t = torch.round(t / scales).clamp(-127, 127).to(torch.int8)
+    return t, scales
+
 class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
     """
     This class is a replacement for `torch.nn.Linear`, implementing dynamic quantization on
@@ -19,6 +32,9 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         bias: bool = True
     ) -> None:
         super().__init__(in_features, out_features, bias)
+        self.register_buffer('x_vals_int8', None)#  = torch.empty((500, 14, 14, 768), dtype=torch.int8).cuda()
+        self.register_buffer('x_scales', None) # = torch.empty((500, 14, 14, 1), dtype=torch.float32).cuda()
+        self.first_call = True
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """
@@ -34,7 +50,6 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
             torch.Tensor: The output tensor after the quantized matmul and rescale.
 
         """
-        # import pdb; pdb.set_trace()
         def quant_int8_dynamic_per_token_linear(
             x,
             w_vals_int8_t,
@@ -42,18 +57,6 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
             bias,
             out_dtype=torch.float32,
         ):
-            def quantize_activation_per_token_absmax(t):
-                n_bits = 8
-                # if the shape of t is [B, N, K], the shape of scales will be [B, N, 1]
-                # want float scales to avoid overflows
-                scales = t.abs().max(dim=-1, keepdim=True)[0].float()
-                q_max = 2 ** (n_bits - 1) - 1
-                scales.clamp_(min=1e-5).div_(q_max)
-                # Note: the original smoothquant does not clamp to qmin/qmax here,
-                # but some of the tests with bfloat16 ended up with a flipped sign
-                # if we don't clamp.  TODO(future) look into this further.
-                t = torch.round(t / scales).clamp(-127, 127).to(torch.int8)
-                return t, scales
 
             def quant_int8_per_token_matmul(
                 x_vals_int8,
@@ -115,9 +118,13 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
 
             # like F.linear, but with int8 dynamic quantization of activation,
             # and a quantized weight
-            x_vals_int8, x_scales = quantize_activation_per_token_absmax(x)
+            if self.first_call is True:
+                x_vals_int8, x_scales = quantize_activation_per_token_absmax(x)
+                self.x_vals_int8 = x_vals_int8
+                self.x_scales = x_scales
+                self.first_call = False
             mm_out = quant_int8_per_token_matmul(
-                x_vals_int8, x_scales, w_vals_int8_t, w_scales, out_dtype)
+                self.x_vals_int8, self.x_scales, w_vals_int8_t, w_scales, out_dtype)
             if bias is not None:
                 mm_out += bias
             return mm_out

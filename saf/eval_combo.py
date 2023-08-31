@@ -15,8 +15,12 @@ def unbind_jagged(device, data, sizes, offsets):
     data = data.to(device=device, non_blocking=True)
     return [data[offsets[batch_idx]:offsets[batch_idx+1]].view(sizes[batch_idx]) for batch_idx in range(len(sizes))]
 
+def pad_to_batch_size(batch, batch_size):
+    if batch.size(0) < batch_size:
+        return torch.cat([batch, batch[:(batch_size - batch.size(0))]], dim=0)
+    return batch
 
-def build_results_batch(predictor, batch):
+def build_results_batch(predictor, batch, batch_size):
     encoder = predictor.model.image_encoder
     device = predictor.device
 
@@ -28,7 +32,8 @@ def build_results_batch(predictor, batch):
     gt_masks_lists = unbind_jagged(*([device] + batch[4:7]))
     if coords_lists is None:
         return None
-    features_batch = encoder(input_image_batch)
+    features_batch = encoder(pad_to_batch_size(input_image_batch, batch_size))
+    features_batch = features_batch[:input_image_batch.size(0)]
     datapoints = zip(*(batch[7:] + [coords_lists, gt_masks_lists]))
 
     result_batch = []
@@ -48,7 +53,8 @@ def build_results_batch(predictor, batch):
             point_labels=fg_labels,
             multimask_output=True,
         )
-        result_batch += create_result_entry(anns, gt_masks, masks, scores, idx)
+        entry = create_result_entry(anns, gt_masks, masks, scores, idx)
+        result_batch += entry
     return result_batch
 
 
@@ -63,6 +69,7 @@ def build_results(batched_data_iter,
 
     results = []
     batch_ms = []
+    batch_idx = 0
     for batch in tqdm.tqdm(batched_data_iter):
         torch.cuda.synchronize()
         start_event = torch.cuda.Event(enable_timing=True)
@@ -70,13 +77,20 @@ def build_results(batched_data_iter,
         start_event.record()
 
         with torch.no_grad():
-            result_batch = build_results_batch(predictor, batch)
+            if batch_idx == 0:
+                result_batch = build_results_batch(predictor, batch, batch_size)
+                torch.cuda.synchronize()
+                predictor.model.image_encoder = torch.compile(
+                    predictor.model.image_encoder, mode="max-autotune")
+                torch.cuda.reset_peak_memory_stats()
+            result_batch = build_results_batch(predictor, batch, batch_size)
             if result_batch is not None:
                 results += result_batch
 
         end_event.record()
         torch.cuda.synchronize()
         batch_ms.append(start_event.elapsed_time(end_event))
+        batch_idx += 1
 
     return results, torch.tensor(batch_ms)
 
@@ -102,9 +116,6 @@ def run(
     num_workers=0,
     use_cudagraph_trees=True
 ):
-    if not use_cudagraph_trees:
-        from torch._inductor import config as tritonconfig
-        tritonconfig.triton.cudagraph_trees = False
 
     # https://github.com/facebookresearch/segment-anything/tree/main#model-checkpoints
     # largest to smallest: vit_h, vit_l, vit_b
@@ -131,20 +142,30 @@ def run(
         predictor.model.mask_decoder, use_half_decoder)
 
     if use_quantize:
+        assert use_compile_max_autotune
         apply_dynamic_quant(predictor.model.image_encoder)
-        from torch._inductor import config as tritonconfig
-        tritonconfig.triton.unique_kernel_names = True
-        tritonconfig.epilogue_fusion_first = True
+        # from torch._inductor import config as tritonconfig
+        # tritonconfig.triton.unique_kernel_names = True
+        # tritonconfig.epilogue_fusion_first = True
 
-    if use_compile:
-        assert not use_compile_max_autotune
-        predictor.model.image_encoder = torch.compile(
-            predictor.model.image_encoder)
+    # if use_compile:
+    #     assert not use_compile_max_autotune
+    #     predictor.model.image_encoder = torch.compile(
+    #         predictor.model.image_encoder)
 
-    if use_compile_max_autotune:
-        assert not use_compile
-        predictor.model.image_encoder = torch.compile(
-            predictor.model.image_encoder, mode="max-autotune-no-cudagraphs")
+    # Only turn this off for quantization
+    if not use_cudagraph_trees:
+        assert use_compile_max_autotune
+        assert use_quantize
+
+    # if use_compile_max_autotune:
+    #     assert not use_compile
+    #     if use_cudagraph_trees:
+    #         predictor.model.image_encoder = torch.compile(
+    #             predictor.model.image_encoder, mode="max-autotune")
+    #     else:
+    #         predictor.model.image_encoder = torch.compile(
+    #             predictor.model.image_encoder, mode="max-autotune-no-cudagraphs")
 
     coco_img_ids, cat_id_to_cat, catIds, coco = setup_coco_img_ids(
         coco_root_dir, coco_slice_name, coco_category_names, img_id)

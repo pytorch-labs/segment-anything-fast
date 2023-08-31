@@ -40,6 +40,10 @@ root_cmd = [python_path, script_path,
             "--mask_debug_out_dir",
             os.path.join(home, "tmp/sam_eval_masks_out")]
 
+# TODO:
+# Make use_compile write out the mode
+# Use max-autotune for everything
+# Make epilogue fusion first a column
 
 def run_experiment(idx, sam_commit_name, model_type, batch_size, num_workers, use_half=False, use_compile=False, extra_args=None, print_header=False, capture_output=True):
     change_sam_commit(sam_commit_name)
@@ -64,37 +68,43 @@ def run_experiment(idx, sam_commit_name, model_type, batch_size, num_workers, us
     if not capture_output:
         return
     t1 = time.time()
-    prefix = ",".join(map(str, [idx, (t1 - t0)/60.0, sam_commit_name]))
+    import torch
+    pytorch_version = torch.__version__
+    prefix = ",".join(map(str, [idx, (t1 - t0)/60.0, sam_commit_name, pytorch_version]))
     if result.returncode != 0:
         print(prefix + ",ERROR")
         return
     if print_header:
         header = result.stdout.decode().split("\n")[-3]
-        print("idx,time,sam_commit_name," + header)
+        print("idx,time,sam_commit_name,pytorch_version," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
-run_experiment("010", "default",     "vit_b",  1,  0, use_half=False, use_compile=False, print_header=True)
-run_experiment("011", "default",     "vit_b",  1, 32, use_half=False, use_compile=False)
-run_experiment("012", "default",     "vit_b", 20, 32, use_half=False, use_compile=False)
-run_experiment("013", "default",     "vit_b", 20, 32, use_half=False, use_compile=True)
-run_experiment("014", "graphbreaks", "vit_b", 20, 32, use_half=False, use_compile=True)
-run_experiment("015", "graphbreaks", "vit_b", 20, 32, use_half=True,  use_compile=True, capture_output=False)
-run_experiment("016", "codesign",    "vit_b", 20, 32, use_half=False, use_compile=True)
-run_experiment("017", "codesign",    "vit_b", 20, 32, use_half=True,  use_compile=True)
-run_experiment("018", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=True)
-run_experiment("019", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True", "--use_cudagraph_trees", "False"])
+# run_experiment("010", "default",     "vit_b",  1,  0, use_half=False, use_compile=False, print_header=True)
+# run_experiment("011", "default",     "vit_b",  1, 32, use_half=False, use_compile=False)
+# run_experiment("012", "default",     "vit_b", 20, 32, use_half=False, use_compile=False)
+# run_experiment("013", "default",     "vit_b", 20, 32, use_half=False, use_compile=True)
+# run_experiment("014", "graphbreaks", "vit_b", 20, 32, use_half=False, use_compile=True)
+# # Breaks because SAM needs edits to support half
+# # run_experiment("015", "graphbreaks", "vit_b", 20, 32, use_half=True,  use_compile=True, capture_output=False)
+# run_experiment("016", "codesign",    "vit_b", 20, 32, use_half=False, use_compile=True)
+# run_experiment("017", "codesign",    "vit_b", 20, 32, use_half=True,  use_compile=True)
+run_experiment("018", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=True, print_header=True)
+# run_experiment("019", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True", "--use_cudagraph_trees", "False"], capture_output=False)
 run_experiment("020", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True"])
-run_experiment("021", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=True,   extra_args=["--use_quantize", "True"])
+# Breaks because quantization needs use_compile_max_autotune
+# run_experiment("021", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=True,   extra_args=["--use_quantize", "True"])
 
-run_experiment("110", "default",     "vit_h",  1,  0, use_half=False, use_compile=False)
-run_experiment("111", "default",     "vit_h",  1, 32, use_half=False, use_compile=False)
-run_experiment("112", "default",     "vit_h",  5, 32, use_half=False, use_compile=False)
-run_experiment("113", "default",     "vit_h",  5, 32, use_half=False, use_compile=True)
-run_experiment("114", "graphbreaks", "vit_h",  5, 32, use_half=False, use_compile=True)
-run_experiment("115", "graphbreaks", "vit_h",  5, 32, use_half=True,  use_compile=True)
-run_experiment("116", "codesign",    "vit_h",  5, 32, use_half=False, use_compile=True)
-run_experiment("117", "codesign",    "vit_h",  5, 32, use_half=True,  use_compile=True)
+# run_experiment("110", "default",     "vit_h",  1,  0, use_half=False, use_compile=False)
+# run_experiment("111", "default",     "vit_h",  1, 32, use_half=False, use_compile=False)
+# run_experiment("112", "default",     "vit_h",  5, 32, use_half=False, use_compile=False)
+# run_experiment("113", "default",     "vit_h",  5, 32, use_half=False, use_compile=True)
+# run_experiment("114", "graphbreaks", "vit_h",  5, 32, use_half=False, use_compile=True)
+# # Breaks because SAM needs edits to support half
+# # run_experiment("115", "graphbreaks", "vit_h",  5, 32, use_half=True,  use_compile=True)
+# run_experiment("116", "codesign",    "vit_h",  5, 32, use_half=False, use_compile=True)
+# run_experiment("117", "codesign",    "vit_h",  5, 32, use_half=True,  use_compile=True)
 run_experiment("118", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile=True)
-run_experiment("119", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True", "--use_cudagraph_trees", "False"])
+# run_experiment("119", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True", "--use_cudagraph_trees", "False"])
 run_experiment("120", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True"])
-run_experiment("121", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile=True,   extra_args=["--use_quantize", "True"])
+# Breaks because quantization needs use_compile_max_autotune
+# run_experiment("121", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile=True,   extra_args=["--use_quantize", "True"])
