@@ -1,4 +1,5 @@
 import torch
+import diskcache
 from pycocotools.coco import COCO
 import numpy as np
 from scipy import ndimage
@@ -168,7 +169,10 @@ def build_datapoint(imgId, coco, pixel_mean, pixel_std, coco_root_dir, coco_slic
     return image, coords_list, gt_masks_list, anns, x, predictor_input_size
 
 
-def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, cache, predictor, use_half, use_half_decoder):
+def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, point_sampling_cache_dir, predictor, use_half, use_half_decoder):
+    cache = diskcache.Cache(point_sampling_cache_dir)
+    # make sure you clear the cache if you change the point sampling algorithm
+    # cache.clear()
 
     pixel_mean = predictor.model.pixel_mean.cpu()
     pixel_std = predictor.model.pixel_std.cpu()
@@ -191,7 +195,7 @@ def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, cache
                                                                                            predictor)
             if len(coords_list) == 0:
                 continue
-            batch[0].append(I)
+            batch[0].append(x)
             coords_list = predictor.transform.apply_coords(
                 np.array(coords_list), I.shape[:2])
             coords_list = torch.tensor(coords_list, dtype=torch.float)
@@ -205,19 +209,19 @@ def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, cache
             batch[6].append(gt_masks_list.numel() + batch[6][-1])
 
             batch[7].append(anns)
-            batch[8].append(x)
+            batch[8].append(I)
             batch[9].append(predictor_input_size)
             batch[10].append(img_idx)
+
+        batch[0] = torch.cat(batch[0]) if len(batch[0]) > 0 else None
+        if use_half:
+            batch[0] = batch[0].half()
 
         batch[1] = torch.cat(batch[1]) if len(batch[0]) > 0 else None
         if batch[1] is not None and use_half_decoder:
             batch[1] = batch[1].half()
 
         batch[4] = torch.cat(batch[4]) if len(batch[0]) > 0 else None
-
-        batch[8] = torch.cat(batch[8]) if len(batch[0]) > 0 else None
-        if use_half:
-            batch[8] = batch[8].half()
 
         return batch
 
