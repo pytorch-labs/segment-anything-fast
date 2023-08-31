@@ -73,7 +73,8 @@ def run_experiment(idx, sam_commit_name, model_type, batch_size, num_workers, us
         print("idx,time,sam_commit_name," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
-run_experiment("010", "default",     "vit_b",  1,  0, use_half=False, use_compile=False, print_header=True)
+run_experiment("010", "default",     "vit_b",  1,  0, use_half=False, use_compile=False, print_header=True, capture_output=False)
+import sys; sys.exit(1)
 run_experiment("011", "default",     "vit_b",  1, 32, use_half=False, use_compile=False)
 run_experiment("012", "default",     "vit_b", 20, 32, use_half=False, use_compile=False)
 run_experiment("013", "default",     "vit_b", 20, 32, use_half=False, use_compile=True)
