@@ -15,10 +15,12 @@ def unbind_jagged(device, data, sizes, offsets):
     data = data.to(device=device, non_blocking=True)
     return [data[offsets[batch_idx]:offsets[batch_idx+1]].view(sizes[batch_idx]) for batch_idx in range(len(sizes))]
 
+
 def pad_to_batch_size(batch, batch_size):
     if batch.size(0) < batch_size:
         return torch.cat([batch, batch[:(batch_size - batch.size(0))]], dim=0)
     return batch
+
 
 def build_results_batch(predictor, batch, batch_size):
     encoder = predictor.model.image_encoder
@@ -62,6 +64,7 @@ def build_results(batched_data_iter,
                   predictor,
                   mask_debug_out_dir,
                   batch_size,
+                  use_compile,
                   use_compile_decoder):
 
     # TODO: Re-enable this for datapoints
@@ -78,10 +81,12 @@ def build_results(batched_data_iter,
 
         with torch.no_grad():
             if batch_idx == 0:
-                result_batch = build_results_batch(predictor, batch, batch_size)
+                result_batch = build_results_batch(
+                    predictor, batch, batch_size)
                 torch.cuda.synchronize()
-                predictor.model.image_encoder = torch.compile(
-                    predictor.model.image_encoder, mode="max-autotune")
+                if use_compile != "False":
+                    predictor.model.image_encoder = torch.compile(
+                        predictor.model.image_encoder, mode=use_compile)
                 torch.cuda.reset_peak_memory_stats()
             result_batch = build_results_batch(predictor, batch, batch_size)
             if result_batch is not None:
@@ -109,12 +114,10 @@ def run(
     img_id=None,
     use_half=False,
     use_half_decoder=False,
-    use_compile=False,
-    use_compile_max_autotune=False,
+    use_compile="False",
     use_compile_decoder=False,
     use_quantize=False,
     num_workers=0,
-    use_cudagraph_trees=True
 ):
 
     # https://github.com/facebookresearch/segment-anything/tree/main#model-checkpoints
@@ -142,30 +145,10 @@ def run(
         predictor.model.mask_decoder, use_half_decoder)
 
     if use_quantize:
-        assert use_compile_max_autotune
         apply_dynamic_quant(predictor.model.image_encoder)
         from torch._inductor import config as tritonconfig
         # tritonconfig.triton.unique_kernel_names = True
         # tritonconfig.epilogue_fusion_first = True
-
-    # if use_compile:
-    #     assert not use_compile_max_autotune
-    #     predictor.model.image_encoder = torch.compile(
-    #         predictor.model.image_encoder)
-
-    # Only turn this off for quantization
-    if not use_cudagraph_trees:
-        assert use_compile_max_autotune
-        assert use_quantize
-
-    # if use_compile_max_autotune:
-    #     assert not use_compile
-    #     if use_cudagraph_trees:
-    #         predictor.model.image_encoder = torch.compile(
-    #             predictor.model.image_encoder, mode="max-autotune")
-    #     else:
-    #         predictor.model.image_encoder = torch.compile(
-    #             predictor.model.image_encoder, mode="max-autotune-no-cudagraphs")
 
     coco_img_ids, cat_id_to_cat, catIds, coco = setup_coco_img_ids(
         coco_root_dir, coco_slice_name, coco_category_names, img_id)
@@ -190,6 +173,7 @@ def run(
                                       predictor,
                                       mask_debug_out_dir,
                                       batch_size,
+                                      use_compile,
                                       use_compile_decoder)
 
     results = [[r[0], r[1], r[2], r[3].item()] for r in results]
@@ -203,9 +187,9 @@ def run(
 
     if print_header:
         print(",".join(["sam_model_type", "batch_size", "max_memory_allocated", "img_s", "mIoU", "use_compile",
-              "use_half", "use_quantize", "use_half_decoder", "use_compile_decoder", "use_cudagraph_trees", "num_workers"]))
+              "use_half", "use_quantize", "use_half_decoder", "use_compile_decoder", "num_workers"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated, img_s, mIoU, use_compile,
-          use_half, use_quantize, use_half_decoder, use_compile_decoder, use_cudagraph_trees, num_workers])))
+          use_half, use_quantize, use_half_decoder, use_compile_decoder, num_workers])))
 
 
 if __name__ == '__main__':
