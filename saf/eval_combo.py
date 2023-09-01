@@ -113,8 +113,12 @@ def run(
     use_compile="False",
     use_compile_decoder=False,
     use_quantize=False,
+    epilogue_fusion_first=False,
     num_workers=0,
 ):
+    from torch._inductor import config as tritonconfig
+    # tritonconfig.triton.unique_kernel_names = True
+    tritonconfig.epilogue_fusion_first = epilogue_fusion_first
 
     # https://github.com/facebookresearch/segment-anything/tree/main#model-checkpoints
     # largest to smallest: vit_h, vit_l, vit_b
@@ -142,9 +146,6 @@ def run(
 
     if use_quantize:
         apply_dynamic_quant(predictor.model.image_encoder)
-        from torch._inductor import config as tritonconfig
-        # tritonconfig.triton.unique_kernel_names = True
-        # tritonconfig.epilogue_fusion_first = True
 
     coco_img_ids, cat_id_to_cat, catIds, coco = setup_coco_img_ids(
         coco_root_dir, coco_slice_name, coco_category_names, img_id)
@@ -183,9 +184,9 @@ def run(
 
     if print_header:
         print(",".join(["sam_model_type", "batch_size", "max_memory_allocated", "img_s", "mIoU", "use_compile",
-              "use_half", "use_quantize", "use_half_decoder", "use_compile_decoder", "num_workers"]))
+              "use_half", "use_quantize", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "num_workers"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated, img_s, mIoU, use_compile,
-          use_half, use_quantize, use_half_decoder, use_compile_decoder, num_workers])))
+          use_half, use_quantize, epilogue_fusion_first, use_half_decoder, use_compile_decoder, num_workers])))
 
 
 if __name__ == '__main__':

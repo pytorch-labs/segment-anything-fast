@@ -36,8 +36,6 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         bias: bool = True
     ) -> None:
         super().__init__(in_features, out_features, bias)
-        self.x_scales = None
-        self.first_call = True
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """
@@ -129,7 +127,7 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
             return mm_out
 
         x_vals_int8, x_scales = quantize_activation_per_token_absmax(X)
-        Y = quant_int8_dynamic_per_token_linear(x_vals_int8, self.x_scales, self.W_int_repr_t, self.W_scales, self.bias, X.dtype)
+        Y = quant_int8_dynamic_per_token_linear(x_vals_int8, x_scales, self.W_int_repr_t, self.W_scales, self.bias, X.dtype)
         return Y
 
     @classmethod

@@ -89,8 +89,8 @@ run_experiment("017", "codesign",    "vit_b", 20, 32, use_half=True,  use_compil
 run_experiment("018", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", print_header=True)
 run_experiment("019", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", extra_args=["--use_quantize", "True"])
 run_experiment("020", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", extra_args=["--use_quantize", "True"])
-# Breaks because quantization needs use_compile_max_autotune
-# run_experiment("021", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=True,   extra_args=["--use_quantize", "True"])
+run_experiment("021", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", extra_args=["--use_quantize", "True", "--epilogue_fusion_first", "True"], capture_output=False)
+run_experiment("022", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", extra_args=["--use_quantize", "True", "--epilogue_fusion_first", "True"])
 
 run_experiment("110", "default",     "vit_h",  1,  0, use_half=False)
 run_experiment("111", "default",     "vit_h",  1, 32, use_half=False)
@@ -104,5 +104,5 @@ run_experiment("117", "codesign",    "vit_h",  5, 32, use_half=True,  use_compil
 run_experiment("118", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile="max-autotune")
 run_experiment("119", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs",  extra_args=["--use_quantize", "True"])
 run_experiment("120", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile="max-autotune",  extra_args=["--use_quantize", "True"])
-# Breaks because quantization needs use_compile_max_autotune
-# run_experiment("121", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile=True,   extra_args=["--use_quantize", "True"])
+run_experiment("121", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs",  extra_args=["--use_quantize", "True", "--epilogue_fusion_first", "True"])
+run_experiment("122", "sdpa",        "vit_h",  5, 32, use_half=True,  use_compile="max-autotune",  extra_args=["--use_quantize", "True", "--epilogue_fusion_first", "True"])
