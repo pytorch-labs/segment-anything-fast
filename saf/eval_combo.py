@@ -81,13 +81,9 @@ def build_results(batched_data_iter,
 
         with torch.no_grad():
             if batch_idx == 0:
-                result_batch = build_results_batch(
-                    predictor, batch, batch_size)
-                torch.cuda.synchronize()
-                if use_compile != "False":
+                if str(use_compile) != "False":
                     predictor.model.image_encoder = torch.compile(
                         predictor.model.image_encoder, mode=use_compile)
-                torch.cuda.reset_peak_memory_stats()
             result_batch = build_results_batch(predictor, batch, batch_size)
             if result_batch is not None:
                 results += result_batch
