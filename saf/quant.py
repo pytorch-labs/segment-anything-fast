@@ -32,8 +32,8 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         bias: bool = True
     ) -> None:
         super().__init__(in_features, out_features, bias)
-        self.register_buffer('x_vals_int8', None)#  = torch.empty((500, 14, 14, 768), dtype=torch.int8).cuda()
-        self.register_buffer('x_scales', None) # = torch.empty((500, 14, 14, 1), dtype=torch.float32).cuda()
+        self.x_vals_int8 = None #  = torch.empty((500, 14, 14, 768), dtype=torch.int8).cuda()
+        self.x_scales = None # = torch.empty((500, 14, 14, 1), dtype=torch.float32).cuda()
         self.first_call = True
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
@@ -52,6 +52,8 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         """
         def quant_int8_dynamic_per_token_linear(
             x,
+            x_vals_int8,
+            x_scales,
             w_vals_int8_t,
             w_scales,
             bias,
@@ -118,18 +120,20 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
 
             # like F.linear, but with int8 dynamic quantization of activation,
             # and a quantized weight
-            if self.first_call is True:
-                x_vals_int8, x_scales = quantize_activation_per_token_absmax(x)
-                self.x_vals_int8 = x_vals_int8
-                self.x_scales = x_scales
-                self.first_call = False
             mm_out = quant_int8_per_token_matmul(
-                self.x_vals_int8, self.x_scales, w_vals_int8_t, w_scales, out_dtype)
+                x_vals_int8, x_scales, w_vals_int8_t, w_scales, out_dtype)
             if bias is not None:
                 mm_out += bias
             return mm_out
+
+        if self.first_call is True:
+            x_vals_int8, x_scales = quantize_activation_per_token_absmax(X)
+            self.x_vals_int8 = x_vals_int8
+            self.x_scales = x_scales
+            self.first_call = False
+
         Y = quant_int8_dynamic_per_token_linear(
-            X, self.W_int_repr_t, self.W_scales, self.bias, X.dtype)
+            X, self.x_vals_int8, self.x_scales, self.W_int_repr_t, self.W_scales, self.bias, X.dtype)
         return Y
 
     @classmethod

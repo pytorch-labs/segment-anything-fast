@@ -88,9 +88,10 @@ def run_experiment(idx, sam_commit_name, model_type, batch_size, num_workers, us
 # # run_experiment("015", "graphbreaks", "vit_b", 20, 32, use_half=True,  use_compile=True, capture_output=False)
 # run_experiment("016", "codesign",    "vit_b", 20, 32, use_half=False, use_compile=True)
 # run_experiment("017", "codesign",    "vit_b", 20, 32, use_half=True,  use_compile=True)
-run_experiment("018", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=True, print_header=True)
+# run_experiment("018", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=True, print_header=True)
 # run_experiment("019", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True", "--use_cudagraph_trees", "False"], capture_output=False)
-run_experiment("020", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True"])
+run_experiment("020", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=False,  extra_args=["--use_compile_max_autotune",  "True", "--use_compile_decoder", "False", "--use_quantize", "True"], capture_output=False)
+import sys; sys.exit(1)
 # Breaks because quantization needs use_compile_max_autotune
 # run_experiment("021", "sdpa",        "vit_b", 20, 32, use_half=True,  use_compile=True,   extra_args=["--use_quantize", "True"])
 

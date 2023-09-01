@@ -144,7 +144,7 @@ def run(
     if use_quantize:
         assert use_compile_max_autotune
         apply_dynamic_quant(predictor.model.image_encoder)
-        # from torch._inductor import config as tritonconfig
+        from torch._inductor import config as tritonconfig
         # tritonconfig.triton.unique_kernel_names = True
         # tritonconfig.epilogue_fusion_first = True
 
