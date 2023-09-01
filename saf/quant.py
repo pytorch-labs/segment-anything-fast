@@ -6,6 +6,10 @@ from typing import Tuple, Optional
 import torch
 from torch._dynamo import is_compiling as dynamo_is_compiling
 
+def quantize_activation_per_token(t, scales):
+    t = torch.round(t / scales).clamp(-127, 127).to(torch.int8)
+    return t
+
 def quantize_activation_per_token_absmax(t):
     n_bits = 8
     # if the shape of t is [B, N, K], the shape of scales will be [B, N, 1]
@@ -32,8 +36,7 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         bias: bool = True
     ) -> None:
         super().__init__(in_features, out_features, bias)
-        self.x_vals_int8 = None #  = torch.empty((500, 14, 14, 768), dtype=torch.int8).cuda()
-        self.x_scales = None # = torch.empty((500, 14, 14, 1), dtype=torch.float32).cuda()
+        self.x_scales = None
         self.first_call = True
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
@@ -51,7 +54,6 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
 
         """
         def quant_int8_dynamic_per_token_linear(
-            x,
             x_vals_int8,
             x_scales,
             w_vals_int8_t,
@@ -128,12 +130,12 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
 
         if self.first_call is True:
             x_vals_int8, x_scales = quantize_activation_per_token_absmax(X)
-            self.x_vals_int8 = x_vals_int8
             self.x_scales = x_scales
             self.first_call = False
+        else:
+            x_vals_int8 = quantize_activation_per_token(X, self.x_scales)
 
-        Y = quant_int8_dynamic_per_token_linear(
-            X, self.x_vals_int8, self.x_scales, self.W_int_repr_t, self.W_scales, self.bias, X.dtype)
+        Y = quant_int8_dynamic_per_token_linear(x_vals_int8, self.x_scales, self.W_int_repr_t, self.W_scales, self.bias, X.dtype)
         return Y
 
     @classmethod
