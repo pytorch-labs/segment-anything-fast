@@ -6,7 +6,6 @@ idx,time,sam_commit_name,pytorch_version,sam_model_type,batch_size,memory(MiB),m
 014,8.17250573237737,graphbreaks,2.1.0a0+gitfc1c862,vit_b,20,39170,48,11.756324908541188,0.5335541124828783,max-autotune,False,None,False,False,False,32
 016,7.973451582590739,codesign,2.1.0a0+gitfc1c862,vit_b,20,39112,48,12.024011622428421,0.5335541124828783,max-autotune,False,None,False,False,False,32
 017,2.921745530764262,codesign,2.1.0a0+gitfc1c862,vit_b,20,19745,24,45.36894877038768,0.5341064946904616,max-autotune,True,None,False,True,False,32
-017,2.554772651195526,codesign,2.1.0a0+gitfc1c862,ERROR
 018,3.10372416973114,sdpa,2.1.0a0+gitfc1c862,vit_b,60,34133,42,51.813121942992076,0.5338931130463048,max-autotune,True,None,False,True,False,32
 018,2.938709565003713,sdpa-decoder,2.1.0a0+gitfc1c862,vit_b,60,34133,42,53.88516513514047,0.5335723273060813,max-autotune,True,None,False,True,False,32
 018b,2.8325767795244854,sdpa-decoder,2.1.0a0+gitfc1c862,vit_b,60,34133,42,54.00936461199889,0.5335723273060813,max-autotune,True,None,False,True,False,32
