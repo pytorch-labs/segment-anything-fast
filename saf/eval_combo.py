@@ -5,7 +5,7 @@ from metrics import calculate_miou, create_result_entry
 from data import build_data, setup_coco_img_ids
 from segment_anything import sam_model_registry, SamPredictor
 
-torch._dynamo.config.cache_size_limit = 5000
+torch._dynamo.config.cache_size_limit = 50000
 
 
 def unbind_jagged(device, data, sizes, offsets):
@@ -79,17 +79,18 @@ def build_results(batched_data_iter,
     batch_ms = []
     batch_idx = 0
     for batch in tqdm.tqdm(batched_data_iter):
-    # for batch in batched_data_iter:
         torch.cuda.synchronize()
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
         start_event.record()
 
         with torch.no_grad():
+            # Defer compilation until after calibration to sidestep
+            # What appears to be a dynamo bug.
+            # This causes a regrettable spike in memory.
             if batch_idx == 0:
                 if str(use_compile) != "False":
-                    predictor.model.image_encoder = torch.compile(
-                        predictor.model.image_encoder, mode=use_compile)
+                    predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile)
             result_batch = build_results_batch(predictor, batch, batch_size)
             if result_batch is not None:
                 results += result_batch
@@ -151,17 +152,20 @@ def run(
         predictor.model.mask_decoder, use_half_decoder)
 
     if compress == "dynamic_quant":
-        from quant import apply_dynamic_quant
+        from dynamic_quant import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
+    elif compress == "static_quant":
+        from static_quant import apply_static_quant
+        apply_static_quant(predictor.model.image_encoder)
     elif compress == "sparse":
-        assert False, "Unsupported"
+        raise NotImplementedError(f"Unsupported compress {compress}")
     elif compress == "dynamic_quant_sparse":
-        from quant_sparse import apply_dynamic_quant_sparse
+        from dynamic_quant_sparse import apply_dynamic_quant_sparse
         apply_dynamic_quant_sparse(predictor.model.image_encoder)
     elif compress == "static_quant_sparse":
-        assert False, "Unsupported"
+        raise NotImplementedError(f"Unsupported compress {compress}")
     elif compress == "sparse":
-        assert False, "Unsupported"
+        raise NotImplementedError(f"Unsupported compress {compress}")
     else:
         assert compress is None, f"Unsupported compress mode {compress}"
 
@@ -202,9 +206,10 @@ def run(
     max_memory_allocated_bytes = torch.cuda.max_memory_allocated()
     _, total_memory = torch.cuda.mem_get_info()
     max_memory_allocated_percentage = int(100 * (max_memory_allocated_bytes / total_memory))
+    max_memory_allocated_bytes = max_memory_allocated_bytes >> 20
 
     if print_header:
-        print(",".join(["sam_model_type", "batch_size", "memory(bytes)", "memory(%)", "img_s", "mIoU", "use_compile",
+        print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s", "mIoU", "use_compile",
               "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "num_workers"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, mIoU, use_compile,
           use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, num_workers])))

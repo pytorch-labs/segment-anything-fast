@@ -16,7 +16,8 @@ sam_commits = {
         "default": "6fdee8f2727f4506cfbbe553e23b895e27956588",
         "graphbreaks": "55f772f77864752f2e98a6fc7713b45a1843c167",
         "codesign": "50cb459d080bcd783a4b481d3bde4150d35ac497",
-        "sdpa": "22f654553bbe7aa28337ce34a25f1a9d27cee111"}
+        "sdpa": "22f654553bbe7aa28337ce34a25f1a9d27cee111",
+        "sdpa-decoder": "7dc75fdf283693f73606f2fe7fdcb693afcb16b9"}
 
 def change_sam_commit(commit_name):
     assert commit_name in sam_commits
@@ -79,32 +80,43 @@ def run_experiment(idx, sam_commit_name, model_type, batch_size, num_workers, us
         print("idx,time,sam_commit_name,pytorch_version," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
-# run_experiment("010", "default",     "vit_b",  1,  0, use_half=False, print_header=True)
-# run_experiment("011", "default",     "vit_b",  1, 32)
-# run_experiment("012", "default",     "vit_b", 80, 32)
-# run_experiment("013", "default",     "vit_b", 80, 32, use_compile="max-autotune")
-# run_experiment("014", "graphbreaks", "vit_b", 80, 32, use_compile="max-autotune")
-# run_experiment("016", "codesign",    "vit_b", 80, 32, use_compile="max-autotune")
-# run_experiment("017", "codesign",    "vit_b", 80, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("018", "sdpa",        "vit_b", 80, 32, use_half=True,  use_compile="max-autotune", print_header=True, capture_output=False)
-# run_experiment("019", "sdpa",        "vit_b", 80, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant")
-# run_experiment("020", "sdpa",        "vit_b", 80, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant")
-# run_experiment("021", "sdpa",        "vit_b", 80, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
-# run_experiment("022", "sdpa",        "vit_b", 80, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
-# run_experiment("023", "sdpa",        "vit_b", 80, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", capture_output=False)
 
-import sys; sys.exit(1)
+run_experiment("010",  "default",      "vit_b",  1,  0, print_header=True)
+run_experiment("011",  "default",      "vit_b",  1, 32)
+run_experiment("012",  "default",      "vit_b", 20, 32)
+run_experiment("013",  "default",      "vit_b", 20, 32, use_compile="max-autotune")
+run_experiment("014",  "graphbreaks",  "vit_b", 20, 32, use_compile="max-autotune")
+run_experiment("016",  "codesign",     "vit_b", 20, 32, use_compile="max-autotune")
+run_experiment("017",  "codesign",     "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
+run_experiment("017",  "codesign",     "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
+run_experiment("018",  "sdpa",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
+run_experiment("018",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
+run_experiment("018b", "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
+run_experiment("019",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant")
+run_experiment("020",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant")
+run_experiment("021",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant",        extra_args=["--epilogue_fusion_first", "True"])
+run_experiment("022",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",        extra_args=["--epilogue_fusion_first", "True"])
+run_experiment("023",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse")
+# With cudagraphs seems to exit unexpectedly
+run_experiment("024",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
+run_experiment("024",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
 
-run_experiment("110", "default",     "vit_h",  1,  0, use_half=False, print_header=True)
-run_experiment("111", "default",     "vit_h",  1, 32)
-run_experiment("112", "default",     "vit_h", 40, 32)
-run_experiment("113", "default",     "vit_h", 40, 32, use_compile="max-autotune")
-run_experiment("114", "graphbreaks", "vit_h", 40, 32, use_compile="max-autotune")
-run_experiment("116", "codesign",    "vit_h", 40, 32, use_compile="max-autotune")
-run_experiment("117", "codesign",    "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("118", "sdpa",        "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("119", "sdpa",        "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant")
-run_experiment("120", "sdpa",        "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant", capture_output=False)
-run_experiment("121", "sdpa",        "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"], capture_output=False)
-run_experiment("122", "sdpa",        "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
-run_experiment("123", "sdpa",        "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", capture_output=False)
+run_experiment("110",  "default",      "vit_h",  1,  0)
+run_experiment("111",  "default",      "vit_h",  1, 32)
+run_experiment("112",  "default",      "vit_h", 10, 32)
+run_experiment("113",  "default",      "vit_h", 10, 32, use_compile="max-autotune")
+run_experiment("114",  "graphbreaks",  "vit_h", 10, 32, use_compile="max-autotune")
+run_experiment("116",  "codesign",     "vit_h", 10, 32, use_compile="max-autotune")
+run_experiment("117",  "codesign",     "vit_h", 10, 32, use_half=True,  use_compile="max-autotune")
+run_experiment("117",  "codesign",     "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
+run_experiment("118",  "sdpa",         "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
+run_experiment("118",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
+run_experiment("118b", "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
+run_experiment("119",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant")
+run_experiment("120",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant")
+run_experiment("121",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
+run_experiment("122",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
+run_experiment("123",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse")
+# With cudagraphs seems to exit unexpectedly
+run_experiment("124",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
+run_experiment("124",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
