@@ -88,7 +88,8 @@ run_experiment("013",  "default",      "vit_b", 20, 32, use_compile="max-autotun
 run_experiment("014",  "graphbreaks",  "vit_b", 20, 32, use_compile="max-autotune")
 run_experiment("016",  "codesign",     "vit_b", 20, 32, use_compile="max-autotune")
 run_experiment("017",  "codesign",     "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("017",  "codesign",     "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
+# This seems to OOM
+# run_experiment("017",  "codesign",     "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
 run_experiment("018",  "sdpa",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
 run_experiment("018",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
 run_experiment("018b", "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
