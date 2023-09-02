@@ -3,7 +3,6 @@ import torch
 import fire
 from metrics import calculate_miou, create_result_entry
 from data import build_data, setup_coco_img_ids
-from quant import apply_dynamic_quant
 from segment_anything import sam_model_registry, SamPredictor
 
 torch._dynamo.config.cache_size_limit = 5000
@@ -18,7 +17,13 @@ def unbind_jagged(device, data, sizes, offsets):
 
 def pad_to_batch_size(batch, batch_size):
     if batch.size(0) < batch_size:
-        return torch.cat([batch, batch[:(batch_size - batch.size(0))]], dim=0)
+        assert batch.dim() == 4
+        full_batch_size = (batch_size, batch.size(1), batch.size(2), batch.size(3))
+        first_entry = batch[0].unsqueeze(0)
+        repeat_first_entry = first_entry.expand(full_batch_size)
+        padded_batch = torch.cat([batch, repeat_first_entry[batch.size(0):batch_size]], dim=0)
+        assert padded_batch.size() == full_batch_size
+        return padded_batch
     return batch
 
 
@@ -74,6 +79,7 @@ def build_results(batched_data_iter,
     batch_ms = []
     batch_idx = 0
     for batch in tqdm.tqdm(batched_data_iter):
+    # for batch in batched_data_iter:
         torch.cuda.synchronize()
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
@@ -112,7 +118,7 @@ def run(
     use_half_decoder=False,
     use_compile="False",
     use_compile_decoder=False,
-    use_quantize=False,
+    compress=None,
     epilogue_fusion_first=False,
     num_workers=0,
 ):
@@ -144,8 +150,21 @@ def run(
     predictor.model.mask_decoder = prep_model(
         predictor.model.mask_decoder, use_half_decoder)
 
-    if use_quantize:
+    if compress == "dynamic_quant":
+        from quant import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
+    elif compress == "sparse":
+        assert False, "Unsupported"
+    elif compress == "dynamic_quant_sparse":
+        from quant_sparse import apply_dynamic_quant_sparse
+        apply_dynamic_quant_sparse(predictor.model.image_encoder)
+    elif compress == "static_quant_sparse":
+        assert False, "Unsupported"
+    elif compress == "sparse":
+        assert False, "Unsupported"
+    else:
+        assert compress is None, f"Unsupported compress mode {compress}"
+
 
     coco_img_ids, cat_id_to_cat, catIds, coco = setup_coco_img_ids(
         coco_root_dir, coco_slice_name, coco_category_names, img_id)
@@ -180,13 +199,15 @@ def run(
     img_s = 1000 / ms_per_img
 
     mIoU = calculate_miou(results, mask_debug_out_dir, True, cat_id_to_cat)
-    max_memory_allocated = torch.cuda.max_memory_allocated()
+    max_memory_allocated_bytes = torch.cuda.max_memory_allocated()
+    _, total_memory = torch.cuda.mem_get_info()
+    max_memory_allocated_percentage = int(100 * (max_memory_allocated_bytes / total_memory))
 
     if print_header:
-        print(",".join(["sam_model_type", "batch_size", "max_memory_allocated", "img_s", "mIoU", "use_compile",
-              "use_half", "use_quantize", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "num_workers"]))
-    print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated, img_s, mIoU, use_compile,
-          use_half, use_quantize, epilogue_fusion_first, use_half_decoder, use_compile_decoder, num_workers])))
+        print(",".join(["sam_model_type", "batch_size", "memory(bytes)", "memory(%)", "img_s", "mIoU", "use_compile",
+              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "num_workers"]))
+    print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, mIoU, use_compile,
+          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, num_workers])))
 
 
 if __name__ == '__main__':
