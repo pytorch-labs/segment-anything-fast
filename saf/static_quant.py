@@ -130,7 +130,8 @@ class StaticallyPerAxisQuantizedLinear(torch.nn.Linear):
                 mm_out += bias
             return mm_out
 
-        # TODO This kind of dynamism doesn't seem possible with dynamo
+        # TODO This kind of dynamism doesn't seem possible with dynamo under max-autotune
+        # But it does seem to work under max-autotune-no-cudagraphs
         if self.calibration_count < self.calibration_limit:
             self.set_x_absmax(X)
         self.calibration_count += 1

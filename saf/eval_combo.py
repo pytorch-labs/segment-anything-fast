@@ -85,9 +85,6 @@ def build_results(batched_data_iter,
         start_event.record()
 
         with torch.no_grad():
-            # Defer compilation until after calibration to sidestep
-            # What appears to be a dynamo bug.
-            # This causes a regrettable spike in memory.
             if batch_idx == 0:
                 if str(use_compile) != "False":
                     predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile)
