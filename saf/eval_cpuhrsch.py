@@ -97,9 +97,10 @@ run_experiment("020",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_comp
 run_experiment("021",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant",        extra_args=["--epilogue_fusion_first", "True"])
 run_experiment("022",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",        extra_args=["--epilogue_fusion_first", "True"])
 run_experiment("023",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse")
+run_experiment("024",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", extra_args=["--epilogue_fusion_first", "True"])
 # With cudagraphs seems to exit unexpectedly
-run_experiment("024",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
-run_experiment("024",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
+run_experiment("025",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
+run_experiment("026",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
 
 run_experiment("110",  "default",      "vit_h",  1,  0)
 run_experiment("111",  "default",      "vit_h",  1, 32)
@@ -117,6 +118,7 @@ run_experiment("120",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_comp
 run_experiment("121",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
 run_experiment("122",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
 run_experiment("123",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse")
+run_experiment("124",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", extra_args=["--epilogue_fusion_first", "True"])
 # With cudagraphs seems to exit unexpectedly
-run_experiment("124",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
-run_experiment("124",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
+run_experiment("125",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
+run_experiment("126",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
