@@ -19,7 +19,7 @@ sam_commits = {
         "sdpa": "22f654553bbe7aa28337ce34a25f1a9d27cee111",
         "sdpa-decoder": "7dc75fdf283693f73606f2fe7fdcb693afcb16b9",
         "predict-masks-nested": "187e2359f9eb3b00d43487a1ec3db849964753e4",
-        "use-rel-pos": d2fa29d580eaf7928eef702cd71d133b943c30cf}
+        "use-rel-pos": "d2fa29d580eaf7928eef702cd71d133b943c30cf"}
 
 def change_sam_commit(commit_name):
     assert commit_name in sam_commits
