@@ -206,6 +206,7 @@ def build_data(coco_img_ids,
             if len(coords_list) == 0:
                 continue
             batch[0].append(x)
+            # batch[0].append(x[0])
             coords_list = predictor.transform.apply_coords(
                 np.array(coords_list), I.shape[:2])
             coords_list = torch.tensor(coords_list, dtype=torch.float)
@@ -230,6 +231,7 @@ def build_data(coco_img_ids,
             return b
 
         batch[0] = cat_and_cast(batch[0], use_half)
+        # batch[0] = torch.nested.nested_tensor(batch[0], dtype=torch.float16 if use_half else torch.float32)
 
         def to_nested_tensor(data, sizes, use_half):
             if len(data) == 0:

@@ -37,6 +37,13 @@ def build_results_batch_nested(predictor, batch, batch_size):
         return None
 
     input_image_batch = input_image_batch.to(device=device, non_blocking=True)
+    # input_image_batch = torch.nested.to_padded_tensor(input_image_batch, 0, output_size=(batch_size, 3, 1024, 1024))
+    # features_batch = encoder(input_image_batch)
+    # feature_batch = []
+    # for b in input_image_batch.unbind():
+    #     feature_batch.append(encoder(b.unsqueeze(0)))
+    # features_batch = torch.nested.nested_tensor([f.squeeze(0) for f in feature_batch])
+    # features_batch = torch.nested.to_padded_tensor(features_batch, 0, output_size=(batch_size, 256, 64, 64))
     features_batch = encoder(pad_to_batch_size(input_image_batch, batch_size))
     features_batch = features_batch[:input_image_batch.size(0)]
     datapoints = list(zip(*(batch[7:])))
@@ -158,6 +165,7 @@ def run(
     epilogue_fusion_first=False,
     num_workers=0,
     use_nested_tensor=False,
+    use_rel_pos=True,
 ):
     from torch._inductor import config as tritonconfig
     # tritonconfig.triton.unique_kernel_names = True
@@ -186,6 +194,9 @@ def run(
         predictor.model.prompt_encoder, use_half_decoder)
     predictor.model.mask_decoder = prep_model(
         predictor.model.mask_decoder, use_half_decoder)
+
+    for block in predictor.model.image_encoder.blocks:
+        block.attn.use_rel_pos = use_rel_pos
 
     if compress == "dynamic_quant":
         from dynamic_quant import apply_dynamic_quant
@@ -248,9 +259,9 @@ def run(
 
     if print_header:
         print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s", "mIoU", "use_compile",
-              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "num_workers"]))
+              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "num_workers"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, mIoU, use_compile,
-          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, num_workers])))
+          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, num_workers])))
 
 
 if __name__ == '__main__':
