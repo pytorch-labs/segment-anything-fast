@@ -17,7 +17,8 @@ sam_commits = {
         "graphbreaks": "55f772f77864752f2e98a6fc7713b45a1843c167",
         "codesign": "50cb459d080bcd783a4b481d3bde4150d35ac497",
         "sdpa": "22f654553bbe7aa28337ce34a25f1a9d27cee111",
-        "sdpa-decoder": "7dc75fdf283693f73606f2fe7fdcb693afcb16b9"}
+        "sdpa-decoder": "7dc75fdf283693f73606f2fe7fdcb693afcb16b9",
+        "predict-masks-nested": "187e2359f9eb3b00d43487a1ec3db849964753e4"}
 
 def change_sam_commit(commit_name):
     assert commit_name in sam_commits
@@ -115,25 +116,27 @@ def run_experiment(idx,
 # # With cudagraphs seems to exit unexpectedly
 # run_experiment("025",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
 # run_experiment("026",  "sdpa-decoder", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
-run_experiment("030",  "sdpa-decoder", "vit_b", 60, 0, use_half=True,  capture_output=False, use_nested_tensor=True)
-import sys; sys.exit(1)
+run_experiment("030",  "predict-masks-nested", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune", capture_output=False, use_nested_tensor=False)
+run_experiment("031",  "predict-masks-nested", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune", capture_output=False, use_nested_tensor=True)
 
-run_experiment("110",  "default",      "vit_h",  1,  0)
-run_experiment("111",  "default",      "vit_h",  1, 32)
-run_experiment("112",  "default",      "vit_h", 10, 32)
-run_experiment("113",  "default",      "vit_h", 10, 32, use_compile="max-autotune")
-run_experiment("114",  "graphbreaks",  "vit_h", 10, 32, use_compile="max-autotune")
-run_experiment("116",  "codesign",     "vit_h", 10, 32, use_compile="max-autotune")
-run_experiment("117",  "codesign",     "vit_h", 10, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("117",  "codesign",     "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("118",  "sdpa",         "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("118",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("119",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant")
-run_experiment("120",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant")
-run_experiment("121",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
-run_experiment("122",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
-run_experiment("123",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse")
-run_experiment("124",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", extra_args=["--epilogue_fusion_first", "True"])
-# With cudagraphs seems to exit unexpectedly
-run_experiment("125",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
-run_experiment("126",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
+# run_experiment("110",  "default",      "vit_h",  1,  0)
+# run_experiment("111",  "default",      "vit_h",  1, 32)
+# run_experiment("112",  "default",      "vit_h", 10, 32)
+# run_experiment("113",  "default",      "vit_h", 10, 32, use_compile="max-autotune")
+# run_experiment("114",  "graphbreaks",  "vit_h", 10, 32, use_compile="max-autotune")
+# run_experiment("116",  "codesign",     "vit_h", 10, 32, use_compile="max-autotune")
+# run_experiment("117",  "codesign",     "vit_h", 10, 32, use_half=True,  use_compile="max-autotune")
+# run_experiment("117",  "codesign",     "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
+# run_experiment("118",  "sdpa",         "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
+# run_experiment("118",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
+# run_experiment("119",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant")
+# run_experiment("120",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant")
+# run_experiment("121",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
+# run_experiment("122",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",      extra_args=["--epilogue_fusion_first", "True"])
+# run_experiment("123",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse")
+# run_experiment("124",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", extra_args=["--epilogue_fusion_first", "True"])
+# # With cudagraphs seems to exit unexpectedly
+# run_experiment("125",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
+# run_experiment("126",  "sdpa-decoder", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
+run_experiment("130",  "predict-masks-nested", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune", capture_output=False, use_nested_tensor=False)
+run_experiment("131",  "predict-masks-nested", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune", capture_output=False, use_nested_tensor=True)
