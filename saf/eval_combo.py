@@ -26,6 +26,39 @@ def pad_to_batch_size(batch, batch_size):
         return padded_batch
     return batch
 
+def build_results_batch_nested(predictor, batch, batch_size):
+    encoder = predictor.model.image_encoder
+    device = predictor.device
+
+    input_image_batch = batch[0]
+    if input_image_batch is None:
+        return None
+    if batch[1] is None:
+        return None
+
+    input_image_batch = input_image_batch.to(device=device, non_blocking=True)
+    features_batch = encoder(pad_to_batch_size(input_image_batch, batch_size))
+    features_batch = features_batch[:input_image_batch.size(0)]
+    datapoints = list(zip(*(batch[7:])))
+
+    nt_coords = batch[1].to(device=device, non_blocking=True)
+    nt_gt_masks = batch[4].to(device=device, non_blocking=True)
+    nt_fg_labels = torch.nested.nested_tensor([torch.ones(
+        (coords.size(0), 1), dtype=torch.int, device=device) for coords in nt_coords.unbind()])
+    predictor.reset_image()
+    predictor.original_sizes = [d[1].shape[:2] for d in datapoints]
+    predictor.input_sizes = [d[2] for d in datapoints]
+    predictor.features_batch = features_batch
+    predictor.is_image_set = True
+    masks, scores, logits = predictor.predict_torch(
+        point_coords=nt_coords,
+        point_labels=nt_fg_labels,
+        multimask_output=True,
+    )
+    result_batch = [create_result_entry(d[0], g, m, s, d[3]) for (m, s, d, g) in zip(masks.unbind(),
+                                                                             scores.unbind(), datapoints,
+                                                                             nt_gt_masks.unbind())]
+    return sum(result_batch, [])
 
 def build_results_batch(predictor, batch, batch_size):
     encoder = predictor.model.image_encoder
@@ -41,7 +74,7 @@ def build_results_batch(predictor, batch, batch_size):
         return None
     features_batch = encoder(pad_to_batch_size(input_image_batch, batch_size))
     features_batch = features_batch[:input_image_batch.size(0)]
-    datapoints = zip(*(batch[7:] + [coords_lists, gt_masks_lists]))
+    datapoints = list(zip(*(batch[7:] + [coords_lists, gt_masks_lists])))
 
     result_batch = []
     for batch_idx, (anns, image, input_size, idx, coords, gt_masks) in enumerate(datapoints):
@@ -70,7 +103,8 @@ def build_results(batched_data_iter,
                   mask_debug_out_dir,
                   batch_size,
                   use_compile,
-                  use_compile_decoder):
+                  use_compile_decoder,
+                  use_nested_tensor):
 
     # TODO: Re-enable this for datapoints
     assert not use_compile_decoder
@@ -88,7 +122,10 @@ def build_results(batched_data_iter,
             if batch_idx == 0:
                 if str(use_compile) != "False":
                     predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile)
-            result_batch = build_results_batch(predictor, batch, batch_size)
+            if use_nested_tensor:
+                result_batch = build_results_batch_nested(predictor, batch, batch_size)
+            else:
+                result_batch = build_results_batch(predictor, batch, batch_size)
             if result_batch is not None:
                 results += result_batch
 
@@ -119,6 +156,7 @@ def run(
     compress=None,
     epilogue_fusion_first=False,
     num_workers=0,
+    use_nested_tensor=False,
 ):
     from torch._inductor import config as tritonconfig
     # tritonconfig.triton.unique_kernel_names = True
@@ -178,7 +216,8 @@ def run(
                              point_sampling_cache_dir,
                              predictor,
                              use_half,
-                             use_half_decoder)
+                             use_half_decoder,
+                             use_nested_tensor)
 
     limit = len(coco_img_ids) if limit is None else limit
     batched_data_iter = torch.utils.data.DataLoader(list(range(limit)),
@@ -191,7 +230,8 @@ def run(
                                       mask_debug_out_dir,
                                       batch_size,
                                       use_compile,
-                                      use_compile_decoder)
+                                      use_compile_decoder,
+                                      use_nested_tensor)
 
     results = [[r[0], r[1], r[2], r[3].item()] for r in results]
 
@@ -207,9 +247,9 @@ def run(
 
     if print_header:
         print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s", "mIoU", "use_compile",
-              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "num_workers"]))
+              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "num_workers"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, mIoU, use_compile,
-          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, num_workers])))
+          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, num_workers])))
 
 
 if __name__ == '__main__':

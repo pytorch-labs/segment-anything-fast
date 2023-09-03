@@ -169,7 +169,16 @@ def build_datapoint(imgId, coco, pixel_mean, pixel_std, coco_root_dir, coco_slic
     return image, coords_list, gt_masks_list, anns, x, predictor_input_size
 
 
-def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, point_sampling_cache_dir, predictor, use_half, use_half_decoder):
+def build_data(coco_img_ids,
+               coco,
+               catIds,
+               coco_root_dir,
+               coco_slice_name,
+               point_sampling_cache_dir,
+               predictor,
+               use_half,
+               use_half_decoder,
+               use_nested_tensor):
     cache = diskcache.Cache(point_sampling_cache_dir)
     # make sure you clear the cache if you change the point sampling algorithm
     # cache.clear()
@@ -184,15 +193,16 @@ def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, point
         for img_idx in indicies:
             imgId = coco_img_ids[img_idx]
 
-            I, coords_list, gt_masks_list, anns, x, predictor_input_size = build_datapoint(imgId,
-                                                                                           coco,
-                                                                                           pixel_mean,
-                                                                                           pixel_std,
-                                                                                           coco_root_dir,
-                                                                                           coco_slice_name,
-                                                                                           catIds,
-                                                                                           cache,
-                                                                                           predictor)
+            datapoint = build_datapoint(imgId,
+                                        coco,
+                                        pixel_mean,
+                                        pixel_std,
+                                        coco_root_dir,
+                                        coco_slice_name,
+                                        catIds,
+                                        cache,
+                                        predictor)
+            I, coords_list, gt_masks_list, anns, x, predictor_input_size = datapoint
             if len(coords_list) == 0:
                 continue
             batch[0].append(x)
@@ -220,8 +230,24 @@ def build_data(coco_img_ids, coco, catIds, coco_root_dir, coco_slice_name, point
             return b
 
         batch[0] = cat_and_cast(batch[0], use_half)
-        batch[1] = cat_and_cast(batch[1], use_half_decoder)
-        batch[4] = cat_and_cast(batch[4], False)
+
+        def to_nested_tensor(data, sizes, use_half):
+            if len(data) == 0:
+                return None
+            return torch.nested.nested_tensor([d.view(s) for (d, s) in zip(data, sizes)],
+                                       dtype=torch.float16 if use_half else torch.float32)
+
+        if use_nested_tensor:
+            batch[1] = to_nested_tensor(batch[1], batch[2], use_half_decoder)
+            batch[2] = None
+            batch[3] = None
+
+            batch[4] = to_nested_tensor(batch[4], batch[5], False)
+            batch[5] = None
+            batch[6] = None
+        else:
+            batch[1] = cat_and_cast(batch[1], use_half_decoder)
+            batch[4] = cat_and_cast(batch[4], False)
 
         return batch
 
