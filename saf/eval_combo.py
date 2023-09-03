@@ -50,6 +50,7 @@ def build_results_batch_nested(predictor, batch, batch_size):
     predictor.input_sizes = [d[2] for d in datapoints]
     predictor.features_batch = features_batch
     predictor.is_image_set = True
+    nt_coords = nt_coords.unsqueeze(2)
     masks, scores, logits = predictor.predict_torch(
         point_coords=nt_coords,
         point_labels=nt_fg_labels,
