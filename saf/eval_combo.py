@@ -16,6 +16,7 @@ def unbind_jagged(device, data, sizes, offsets):
 
 
 def pad_to_batch_size(batch, batch_size):
+    # This avoids recompilation
     if batch.size(0) < batch_size:
         assert batch.dim() == 4
         full_batch_size = (batch_size, batch.size(1), batch.size(2), batch.size(3))
@@ -66,7 +67,7 @@ def build_results_batch_nested(predictor, batch, batch_size):
     result_batch = [create_result_entry(d[0], g, m, s, d[3]) for (m, s, d, g) in zip(masks.unbind(),
                                                                              scores.unbind(), datapoints,
                                                                              nt_gt_masks.unbind())]
-    return sum(result_batch, [])
+    return sum(result_batch, []), input_image_batch.size(0)
 
 def build_results_batch(predictor, batch, batch_size):
     encoder = predictor.model.image_encoder
@@ -103,7 +104,7 @@ def build_results_batch(predictor, batch, batch_size):
         )
         entry = create_result_entry(anns, gt_masks, masks, scores, idx)
         result_batch += entry
-    return result_batch
+    return result_batch, input_image_batch.size(0)
 
 
 def build_results(batched_data_iter,
@@ -118,31 +119,39 @@ def build_results(batched_data_iter,
     assert not use_compile_decoder
 
     results = []
-    batch_ms = []
     batch_idx = 0
+    num_images = 0
+    start_event = None
+    end_event = None
     for batch in tqdm.tqdm(batched_data_iter):
-        torch.cuda.synchronize()
-        start_event = torch.cuda.Event(enable_timing=True)
-        end_event = torch.cuda.Event(enable_timing=True)
-        start_event.record()
-
         with torch.no_grad():
             if batch_idx == 0:
                 if str(use_compile) != "False":
                     predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile)
             if use_nested_tensor:
-                result_batch = build_results_batch_nested(predictor, batch, batch_size)
+                result_batch, num_datapoints = build_results_batch_nested(predictor, batch, batch_size)
             else:
-                result_batch = build_results_batch(predictor, batch, batch_size)
+                result_batch, num_datapoints = build_results_batch(predictor, batch, batch_size)
             if result_batch is not None:
                 results += result_batch
 
-        end_event.record()
-        torch.cuda.synchronize()
-        batch_ms.append(start_event.elapsed_time(end_event))
+        if batch_idx == 0:
+            torch.cuda.synchronize()
+            start_event = torch.cuda.Event(enable_timing=True)
+            end_event = torch.cuda.Event(enable_timing=True)
+            start_event.record()
+        else:
+            num_images += num_datapoints
         batch_idx += 1
 
-    return results, torch.tensor(batch_ms)
+    end_event.record()
+    torch.cuda.synchronize()
+    avg_ms_per_img = None
+    if num_datapoints > 0:
+        avg_ms_per_img = start_event.elapsed_time(end_event)
+        avg_ms_per_img = avg_ms_per_img / num_images
+
+    return results, avg_ms_per_img
 
 
 def run(
@@ -237,19 +246,17 @@ def run(
                                                     collate_fn=build_batch,
                                                     num_workers=num_workers,
                                                     pin_memory=True)
-    results, batch_ms = build_results(batched_data_iter,
-                                      predictor,
-                                      mask_debug_out_dir,
-                                      batch_size,
-                                      use_compile,
-                                      use_compile_decoder,
-                                      use_nested_tensor)
+    results, avg_ms_per_img = build_results(batched_data_iter,
+                                            predictor,
+                                            mask_debug_out_dir,
+                                            batch_size,
+                                            use_compile,
+                                            use_compile_decoder,
+                                            use_nested_tensor)
 
     results = [[r[0], r[1], r[2], r[3].item()] for r in results]
 
-    batch_ms_p50 = batch_ms.quantile(0.5, interpolation='nearest').item()
-    ms_per_img = (batch_ms_p50 / batch_size)
-    img_s = 1000 / ms_per_img
+    img_s = 1000 / avg_ms_per_img
 
     mIoU = calculate_miou(results, mask_debug_out_dir, True, cat_id_to_cat)
     max_memory_allocated_bytes = torch.cuda.max_memory_allocated()
@@ -258,7 +265,7 @@ def run(
     max_memory_allocated_bytes = max_memory_allocated_bytes >> 20
 
     if print_header:
-        print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s", "mIoU", "use_compile",
+        print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s(avg)", "mIoU", "use_compile",
               "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "num_workers"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, mIoU, use_compile,
           use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, num_workers])))
