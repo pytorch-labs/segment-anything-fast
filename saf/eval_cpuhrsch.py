@@ -19,7 +19,8 @@ sam_commits = {
         "sdpa": "22f654553bbe7aa28337ce34a25f1a9d27cee111",
         "sdpa-decoder": "7dc75fdf283693f73606f2fe7fdcb693afcb16b9",
         "predict-masks-nested": "187e2359f9eb3b00d43487a1ec3db849964753e4",
-        "use-rel-pos": "d2fa29d580eaf7928eef702cd71d133b943c30cf"}
+        "use-rel-pos": "d2fa29d580eaf7928eef702cd71d133b943c30cf",
+        "hacky-nested-encoder": "8f2fc3cc90b222a2431d4c43379282e36f021b69"}
 
 def change_sam_commit(commit_name):
     assert commit_name in sam_commits
@@ -125,6 +126,10 @@ run_experiment("036",  "use-rel-pos",          "vit_b", 60, 32, use_half=True,  
 run_experiment("037",  "use-rel-pos",          "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",        use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--epilogue_fusion_first", "True"])
 run_experiment("038",  "use-rel-pos",          "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", use_nested_tensor=True, extra_args=["--use_rel_pos", "True" ])
 run_experiment("039",  "use-rel-pos",          "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", use_nested_tensor=True, extra_args=["--use_rel_pos", "False"])
+run_experiment("040",  "hacky-nested-encoder", "vit_b", 60, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "True",  "--pad_input_image_batch", "True"])
+run_experiment("041",  "hacky-nested-encoder", "vit_b", 60, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "True",  "--pad_input_image_batch", "False"])
+run_experiment("042",  "hacky-nested-encoder", "vit_b", 60, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--pad_input_image_batch", "True"])
+run_experiment("043",  "hacky-nested-encoder", "vit_b", 60, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--pad_input_image_batch", "False"])
 
 run_experiment("110",  "default",              "vit_h",  1,  0)
 run_experiment("111",  "default",              "vit_h",  1, 32)
@@ -155,3 +160,7 @@ run_experiment("136",  "use-rel-pos",          "vit_h", 40, 32, use_half=True,  
 run_experiment("137",  "use-rel-pos",          "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",        use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--epilogue_fusion_first", "True"])
 run_experiment("138",  "use-rel-pos",          "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", use_nested_tensor=True, extra_args=["--use_rel_pos", "True" ])
 run_experiment("139",  "use-rel-pos",          "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", use_nested_tensor=True, extra_args=["--use_rel_pos", "False"])
+run_experiment("140",  "hacky-nested-encoder", "vit_h", 40, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "True",  "--pad_input_image_batch", "True"])
+run_experiment("141",  "hacky-nested-encoder", "vit_h", 40, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "True",  "--pad_input_image_batch", "False"])
+run_experiment("142",  "hacky-nested-encoder", "vit_h", 40, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--pad_input_image_batch", "True"])
+run_experiment("143",  "hacky-nested-encoder", "vit_h", 40, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--pad_input_image_batch", "False"])

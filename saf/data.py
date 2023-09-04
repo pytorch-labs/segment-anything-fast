@@ -120,7 +120,16 @@ def _get_center_point(mask, ann_id, cache):
     return global_coords
 
 
-def build_datapoint(imgId, coco, pixel_mean, pixel_std, coco_root_dir, coco_slice_name, catIds, cache, predictor):
+def build_datapoint(imgId,
+                    coco,
+                    pixel_mean,
+                    pixel_std,
+                    coco_root_dir,
+                    coco_slice_name,
+                    catIds,
+                    cache,
+                    predictor,
+                    pad_input_image_batch):
     img = coco.loadImgs(imgId)[0]
 
     file_location = f'{coco_root_dir}/{coco_slice_name}/{img["file_name"]}'
@@ -148,8 +157,13 @@ def build_datapoint(imgId, coco, pixel_mean, pixel_std, coco_root_dir, coco_slic
 
     # predictor_set_image begin
     # Transform the image to the form expected by the model
-    input_image = predictor.transform.apply_image(image)
-    input_image_torch = torch.as_tensor(input_image)
+    if pad_input_image_batch:
+        input_image = predictor.transform.apply_image(image)
+        input_image_torch = torch.as_tensor(input_image)
+    else:
+        import numpy as np
+        from torchvision.transforms.functional import to_pil_image
+        input_image_torch = torch.as_tensor(np.array(to_pil_image(image)))
     input_image_torch = input_image_torch.permute(
         2, 0, 1).contiguous()[None, :, :, :]
     predictor_input_size = input_image_torch.shape[-2:]
@@ -159,11 +173,14 @@ def build_datapoint(imgId, coco, pixel_mean, pixel_std, coco_root_dir, coco_slic
     # Normalize colors
     x = (x - pixel_mean) / pixel_std
 
-    # Pad
-    h, w = x.shape[-2:]
-    padh = predictor.model.image_encoder.img_size - h
-    padw = predictor.model.image_encoder.img_size - w
-    x = torch.nn.functional.pad(x, (0, padw, 0, padh))
+    if pad_input_image_batch:
+        # Pad
+        h, w = x.shape[-2:]
+        padh = predictor.model.image_encoder.img_size - h
+        padw = predictor.model.image_encoder.img_size - w
+        x = torch.nn.functional.pad(x, (0, padw, 0, padh))
+    else:
+        x = x.squeeze(0)
 
     gt_masks_list = torch.stack(gt_masks_list) if len(gt_masks_list) else None
     return image, coords_list, gt_masks_list, anns, x, predictor_input_size
@@ -178,7 +195,8 @@ def build_data(coco_img_ids,
                predictor,
                use_half,
                use_half_decoder,
-               use_nested_tensor):
+               use_nested_tensor,
+               pad_input_image_batch):
     cache = diskcache.Cache(point_sampling_cache_dir)
     # make sure you clear the cache if you change the point sampling algorithm
     # cache.clear()
@@ -201,7 +219,8 @@ def build_data(coco_img_ids,
                                         coco_slice_name,
                                         catIds,
                                         cache,
-                                        predictor)
+                                        predictor,
+                                        pad_input_image_batch)
             I, coords_list, gt_masks_list, anns, x, predictor_input_size = datapoint
             if len(coords_list) == 0:
                 continue
@@ -230,14 +249,18 @@ def build_data(coco_img_ids,
                 return b.half()
             return b
 
-        batch[0] = cat_and_cast(batch[0], use_half)
-        # batch[0] = torch.nested.nested_tensor(batch[0], dtype=torch.float16 if use_half else torch.float32)
-
-        def to_nested_tensor(data, sizes, use_half):
+        def to_nested_tensor(data, sizes=None, use_half=False):
             if len(data) == 0:
                 return None
-            return torch.nested.nested_tensor([d.view(s) for (d, s) in zip(data, sizes)],
-                                       dtype=torch.float16 if use_half else torch.float32)
+            dtype = torch.float16 if use_half else torch.float32
+            if sizes is not None:
+                data = [d.view(s) for (d, s) in zip(data, sizes)]
+            return torch.nested.nested_tensor(data, dtype=dtype)
+
+        if pad_input_image_batch:
+            batch[0] = cat_and_cast(batch[0], use_half)
+        else:
+            batch[0] = to_nested_tensor(batch[0], use_half=use_half)
 
         if use_nested_tensor:
             batch[1] = to_nested_tensor(batch[1], batch[2], use_half_decoder)

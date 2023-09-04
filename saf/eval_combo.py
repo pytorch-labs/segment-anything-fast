@@ -27,26 +27,24 @@ def pad_to_batch_size(batch, batch_size):
         return padded_batch
     return batch
 
-def build_results_batch_nested(predictor, batch, batch_size):
+def get_features_batch(encoder, input_image_batch, pad_input_image_batch, batch_size):
+    if pad_input_image_batch:
+        features_batch = encoder(pad_to_batch_size(input_image_batch, batch_size))
+        return features_batch[:input_image_batch.size(0)]
+    return encoder(input_image_batch)
+
+def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_batch):
     encoder = predictor.model.image_encoder
     device = predictor.device
 
     input_image_batch = batch[0]
     if input_image_batch is None:
-        return None
+        return (None, None)
     if batch[1] is None:
-        return None
+        return (None, None)
 
     input_image_batch = input_image_batch.to(device=device, non_blocking=True)
-    # input_image_batch = torch.nested.to_padded_tensor(input_image_batch, 0, output_size=(batch_size, 3, 1024, 1024))
-    # features_batch = encoder(input_image_batch)
-    # feature_batch = []
-    # for b in input_image_batch.unbind():
-    #     feature_batch.append(encoder(b.unsqueeze(0)))
-    # features_batch = torch.nested.nested_tensor([f.squeeze(0) for f in feature_batch])
-    # features_batch = torch.nested.to_padded_tensor(features_batch, 0, output_size=(batch_size, 256, 64, 64))
-    features_batch = encoder(pad_to_batch_size(input_image_batch, batch_size))
-    features_batch = features_batch[:input_image_batch.size(0)]
+    features_batch = get_features_batch(encoder, input_image_batch, pad_input_image_batch, batch_size)
     datapoints = list(zip(*(batch[7:])))
 
     nt_coords = batch[1].to(device=device, non_blocking=True)
@@ -69,20 +67,19 @@ def build_results_batch_nested(predictor, batch, batch_size):
                                                                              nt_gt_masks.unbind())]
     return sum(result_batch, []), input_image_batch.size(0)
 
-def build_results_batch(predictor, batch, batch_size):
+def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
     encoder = predictor.model.image_encoder
     device = predictor.device
 
     input_image_batch = batch[0]
     if input_image_batch is None:
-        return None
+        return (None, None)
     input_image_batch = input_image_batch.to(device=device, non_blocking=True)
     coords_lists = unbind_jagged(*([device] + batch[1:4]))
     gt_masks_lists = unbind_jagged(*([device] + batch[4:7]))
     if coords_lists is None:
-        return None
-    features_batch = encoder(pad_to_batch_size(input_image_batch, batch_size))
-    features_batch = features_batch[:input_image_batch.size(0)]
+        return (None, None)
+    features_batch = get_features_batch(encoder, input_image_batch, pad_input_image_batch, batch_size)
     datapoints = list(zip(*(batch[7:] + [coords_lists, gt_masks_lists])))
 
     result_batch = []
@@ -113,7 +110,8 @@ def build_results(batched_data_iter,
                   batch_size,
                   use_compile,
                   use_compile_decoder,
-                  use_nested_tensor):
+                  use_nested_tensor,
+                  pad_input_image_batch):
 
     # TODO: Re-enable this for datapoints
     assert not use_compile_decoder
@@ -129,9 +127,9 @@ def build_results(batched_data_iter,
                 if str(use_compile) != "False":
                     predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile)
             if use_nested_tensor:
-                result_batch, num_datapoints = build_results_batch_nested(predictor, batch, batch_size)
+                result_batch, num_datapoints = build_results_batch_nested(predictor, batch, batch_size, pad_input_image_batch)
             else:
-                result_batch, num_datapoints = build_results_batch(predictor, batch, batch_size)
+                result_batch, num_datapoints = build_results_batch(predictor, batch, batch_size, pad_input_image_batch)
             if result_batch is not None:
                 results += result_batch
 
@@ -141,7 +139,8 @@ def build_results(batched_data_iter,
             end_event = torch.cuda.Event(enable_timing=True)
             start_event.record()
         else:
-            num_images += num_datapoints
+            if num_datapoints is not None:
+                num_images += num_datapoints
         batch_idx += 1
 
     end_event.record()
@@ -175,6 +174,7 @@ def run(
     num_workers=0,
     use_nested_tensor=False,
     use_rel_pos=True,
+    pad_input_image_batch=True,
 ):
     from torch._inductor import config as tritonconfig
     # tritonconfig.triton.unique_kernel_names = True
@@ -238,7 +238,8 @@ def run(
                              predictor,
                              use_half,
                              use_half_decoder,
-                             use_nested_tensor)
+                             use_nested_tensor,
+                             pad_input_image_batch)
 
     limit = len(coco_img_ids) if limit is None else limit
     batched_data_iter = torch.utils.data.DataLoader(list(range(limit)),
@@ -252,7 +253,8 @@ def run(
                                             batch_size,
                                             use_compile,
                                             use_compile_decoder,
-                                            use_nested_tensor)
+                                            use_nested_tensor,
+                                            pad_input_image_batch)
 
     results = [[r[0], r[1], r[2], r[3].item()] for r in results]
 
