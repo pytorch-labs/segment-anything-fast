@@ -157,13 +157,8 @@ def build_datapoint(imgId,
 
     # predictor_set_image begin
     # Transform the image to the form expected by the model
-    if pad_input_image_batch:
-        input_image = predictor.transform.apply_image(image)
-        input_image_torch = torch.as_tensor(input_image)
-    else:
-        import numpy as np
-        from torchvision.transforms.functional import to_pil_image
-        input_image_torch = torch.as_tensor(np.array(to_pil_image(image)))
+    input_image = predictor.transform.apply_image(image)
+    input_image_torch = torch.as_tensor(input_image)
     input_image_torch = input_image_torch.permute(
         2, 0, 1).contiguous()[None, :, :, :]
     predictor_input_size = input_image_torch.shape[-2:]

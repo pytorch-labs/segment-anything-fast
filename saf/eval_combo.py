@@ -213,6 +213,13 @@ def run(
     elif compress == "static_quant":
         from static_quant import apply_static_quant
         apply_static_quant(predictor.model.image_encoder)
+        from pathlib import Path
+        weights_path = Path(f"{sam_model_type}_{batch_size}_static_quant_weights.ptk")
+        if weights_path.exists() and weights_path.is_file():
+            print("Loading static quantization weights")
+            weights = torch.load(f"{sam_model_type}_{batch_size}_static_quant_weights.ptk")
+            from static_quant import set_x_absmax
+            set_x_absmax(predictor.model.image_encoder, weights)
     elif compress == "sparse":
         raise NotImplementedError(f"Unsupported compress {compress}")
     elif compress == "dynamic_quant_sparse":
@@ -255,6 +262,11 @@ def run(
                                             use_compile_decoder,
                                             use_nested_tensor,
                                             pad_input_image_batch)
+    if compress == "static_quant":
+        from static_quant import get_x_absmax
+        weights = get_x_absmax(predictor.model.image_encoder)
+        print("Saving static quantization weights")
+        torch.save(weights, f"{sam_model_type}_{batch_size}_static_quant_weights.ptk")
 
     results = [[r[0], r[1], r[2], r[3].item()] for r in results]
 
@@ -268,9 +280,9 @@ def run(
 
     if print_header:
         print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s(avg)", "mIoU", "use_compile",
-              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "num_workers"]))
+              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, mIoU, use_compile,
-          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, num_workers])))
+          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers])))
 
 
 if __name__ == '__main__':

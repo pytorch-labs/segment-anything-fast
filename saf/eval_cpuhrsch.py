@@ -114,8 +114,12 @@ run_experiment("022",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  
 run_experiment("023",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse")
 run_experiment("024",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", extra_args=["--epilogue_fusion_first", "True"])
 # With cudagraphs seems to exit unexpectedly
+# Run once to save out weights
+run_experiment("025a", "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
 run_experiment("025",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
 run_experiment("026",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
+run_experiment("027",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="static_quant")
+run_experiment("028",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
 run_experiment("030",  "predict-masks-nested", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",                                                use_nested_tensor=False)
 run_experiment("031",  "predict-masks-nested", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",                                                use_nested_tensor=True)
 run_experiment("032",  "use-rel-pos",          "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",                                                use_nested_tensor=True, extra_args=["--use_rel_pos", "True" ])
@@ -126,6 +130,8 @@ run_experiment("036",  "use-rel-pos",          "vit_b", 60, 32, use_half=True,  
 run_experiment("037",  "use-rel-pos",          "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",        use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--epilogue_fusion_first", "True"])
 run_experiment("038",  "use-rel-pos",          "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", use_nested_tensor=True, extra_args=["--use_rel_pos", "True" ])
 run_experiment("039",  "use-rel-pos",          "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", use_nested_tensor=True, extra_args=["--use_rel_pos", "False"])
+run_experiment("0310", "use-rel-pos",          "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="static_quant",         use_nested_tensor=True, extra_args=["--use_rel_pos", "True" ])
+run_experiment("0311", "use-rel-pos",          "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="static_quant",         use_nested_tensor=True, extra_args=["--use_rel_pos", "False"])
 run_experiment("040",  "hacky-nested-encoder", "vit_b", 60, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "True",  "--pad_input_image_batch", "True"])
 run_experiment("041",  "hacky-nested-encoder", "vit_b", 60, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "True",  "--pad_input_image_batch", "False"])
 run_experiment("042",  "hacky-nested-encoder", "vit_b", 60, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--pad_input_image_batch", "True"])
@@ -148,8 +154,12 @@ run_experiment("122",  "sdpa-decoder",         "vit_h", 40, 32, use_half=True,  
 run_experiment("123",  "sdpa-decoder",         "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse")
 run_experiment("124",  "sdpa-decoder",         "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", extra_args=["--epilogue_fusion_first", "True"])
 # With cudagraphs seems to exit unexpectedly
+# Run once to save out weights
+run_experiment("125a", "sdpa-decoder",         "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
 run_experiment("125",  "sdpa-decoder",         "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant")
 run_experiment("126",  "sdpa-decoder",         "vit_h", 40, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
+run_experiment("127",  "sdpa-decoder",         "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="static_quant")
+run_experiment("128",  "sdpa-decoder",         "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="static_quant",         extra_args=["--epilogue_fusion_first", "True"])
 run_experiment("130",  "predict-masks-nested", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",                                                use_nested_tensor=False)
 run_experiment("131",  "predict-masks-nested", "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",                                                use_nested_tensor=True)
 run_experiment("132",  "use-rel-pos",          "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",                                                use_nested_tensor=True, extra_args=["--use_rel_pos", "True" ])
@@ -160,6 +170,8 @@ run_experiment("136",  "use-rel-pos",          "vit_h", 40, 32, use_half=True,  
 run_experiment("137",  "use-rel-pos",          "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",        use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--epilogue_fusion_first", "True"])
 run_experiment("138",  "use-rel-pos",          "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", use_nested_tensor=True, extra_args=["--use_rel_pos", "True" ])
 run_experiment("139",  "use-rel-pos",          "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant_sparse", use_nested_tensor=True, extra_args=["--use_rel_pos", "False"])
+run_experiment("1310", "use-rel-pos",          "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="static_quant",         use_nested_tensor=True, extra_args=["--use_rel_pos", "True" ])
+run_experiment("1311", "use-rel-pos",          "vit_h", 40, 32, use_half=True,  use_compile="max-autotune",               compress="static_quant",         use_nested_tensor=True, extra_args=["--use_rel_pos", "False"])
 run_experiment("140",  "hacky-nested-encoder", "vit_h", 40, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "True",  "--pad_input_image_batch", "True"])
 run_experiment("141",  "hacky-nested-encoder", "vit_h", 40, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "True",  "--pad_input_image_batch", "False"])
 run_experiment("142",  "hacky-nested-encoder", "vit_h", 40, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--pad_input_image_batch", "True"])
