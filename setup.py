@@ -8,8 +8,8 @@ setup(
         'torch',
         'diskcache',
         'pycocotools',
-        'scipy'
-        'skimage'
+        'scipy',
+        'skimage',
         'scikit-image',
     ],
     description='A pruned, quantized, compiled, nested and batched implementation of nested tensor',
