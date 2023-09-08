@@ -61,7 +61,9 @@ def run_experiment(idx,
                    use_nested_tensor=False,
                    extra_args=None,
                    print_header=False,
-                   capture_output=True):
+                   capture_output=True,
+                   limit=None,
+                   profile_path=None):
     change_sam_commit(sam_commit_name)
     args = root_cmd
     args = args + ["--sam_model_type", model_type]
@@ -75,6 +77,10 @@ def run_experiment(idx,
         args = args + ["--compress", compress]
     if use_nested_tensor:
         args = args + ["--use_nested_tensor", str(use_nested_tensor)]
+    if limit is not None:
+        args = args + ["--limit", str(limit)]
+    if profile_path is not None:
+        args = args + ["--profile-path", profile_path]
     if extra_args is None:
         extra_args = []
     args = args + extra_args
@@ -96,6 +102,9 @@ def run_experiment(idx,
         header = result.stdout.decode().split("\n")[-3]
         print("idx,time,sam_commit_name,pytorch_version," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
+
+
+# run_experiment("031",  "use-rel-pos", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",  compress="static_quant",                              use_nested_tensor=True,  limit=720, profile_path="/home/cpuhrsch/tmp/traces/nt.json.gz", capture_output=False, extra_args=["--use_rel_pos", "False"])
 
 run_experiment("010",  "default",              "vit_b",  1,  0, print_header=True)
 run_experiment("011",  "default",              "vit_b",  1, 32)

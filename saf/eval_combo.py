@@ -44,7 +44,8 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
         return (None, None)
 
     input_image_batch = input_image_batch.to(device=device, non_blocking=True)
-    features_batch = get_features_batch(encoder, input_image_batch, pad_input_image_batch, batch_size)
+    with torch.autograd.profiler.record_function("nt get_features_batch"):
+        features_batch = get_features_batch(encoder, input_image_batch, pad_input_image_batch, batch_size)
     datapoints = list(zip(*(batch[7:])))
 
     nt_coords = batch[1].to(device=device, non_blocking=True)
@@ -62,9 +63,10 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
         point_labels=nt_fg_labels,
         multimask_output=True,
     )
-    result_batch = [create_result_entry(d[0], g, m, s, d[3]) for (m, s, d, g) in zip(masks.unbind(),
-                                                                             scores.unbind(), datapoints,
-                                                                             nt_gt_masks.unbind())]
+    with torch.autograd.profiler.record_function("nt create_results_entry"):
+        result_batch = [create_result_entry(d[0], g, m, s, d[3]) for (m, s, d, g) in zip(masks.unbind(),
+                                                                                 scores.unbind(), datapoints,
+                                                                                 nt_gt_masks.unbind())]
     return sum(result_batch, []), input_image_batch.size(0)
 
 def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
@@ -79,7 +81,8 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
     gt_masks_lists = unbind_jagged(*([device] + batch[4:7]))
     if coords_lists is None:
         return (None, None)
-    features_batch = get_features_batch(encoder, input_image_batch, pad_input_image_batch, batch_size)
+    with torch.autograd.profiler.record_function("image encoder"):
+        features_batch = get_features_batch(encoder, input_image_batch, pad_input_image_batch, batch_size)
     datapoints = list(zip(*(batch[7:] + [coords_lists, gt_masks_lists])))
 
     result_batch = []
@@ -119,6 +122,7 @@ def build_results(batched_data_iter,
     results = []
     batch_idx = 0
     num_images = 0
+    num_batches = 0
     start_event = None
     end_event = None
     for batch in tqdm.tqdm(batched_data_iter):
@@ -141,6 +145,7 @@ def build_results(batched_data_iter,
         else:
             if num_datapoints is not None:
                 num_images += num_datapoints
+                num_batches += 1
         batch_idx += 1
 
     end_event.record()
@@ -150,7 +155,21 @@ def build_results(batched_data_iter,
         avg_ms_per_img = start_event.elapsed_time(end_event)
         avg_ms_per_img = avg_ms_per_img / num_images
 
-    return results, avg_ms_per_img
+    return results, avg_ms_per_img, num_batches, num_images
+
+
+def identity_runner(fn, *args, **kwargs):
+    return fn(*args, **kwargs)
+
+
+def profiler_runner(path, fn, *args, **kwargs):
+    with torch.profiler.profile(
+            activities=[torch.profiler.ProfilerActivity.CPU,
+                        torch.profiler.ProfilerActivity.CUDA],
+            record_shapes=True) as prof:
+        result = fn(*args, **kwargs)
+    prof.export_chrome_trace(path)
+    return result
 
 
 def run(
@@ -175,6 +194,7 @@ def run(
     use_nested_tensor=False,
     use_rel_pos=True,
     pad_input_image_batch=True,
+    profile_path=None,
 ):
     from torch._inductor import config as tritonconfig
     # tritonconfig.triton.unique_kernel_names = True
@@ -254,14 +274,21 @@ def run(
                                                     collate_fn=build_batch,
                                                     num_workers=num_workers,
                                                     pin_memory=True)
-    results, avg_ms_per_img = build_results(batched_data_iter,
-                                            predictor,
-                                            mask_debug_out_dir,
-                                            batch_size,
-                                            use_compile,
-                                            use_compile_decoder,
-                                            use_nested_tensor,
-                                            pad_input_image_batch)
+    runner = identity_runner
+    if profile_path is not None:
+        import functools
+        runner = functools.partial(profiler_runner, profile_path)
+
+    results, avg_ms_per_img, num_batches, num_images = runner(build_results,
+                                                              batched_data_iter,
+                                                              predictor,
+                                                              mask_debug_out_dir,
+                                                              batch_size,
+                                                              use_compile,
+                                                              use_compile_decoder,
+                                                              use_nested_tensor,
+                                                              pad_input_image_batch)
+
     if compress == "static_quant":
         from static_quant import get_x_absmax
         weights = get_x_absmax(predictor.model.image_encoder)
@@ -280,9 +307,9 @@ def run(
 
     if print_header:
         print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s(avg)", "mIoU", "use_compile",
-              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers"]))
+              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers", "num_batches", "num_images", "profile_path"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, mIoU, use_compile,
-          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers])))
+          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers, num_batches, num_images, profile_path])))
 
 
 if __name__ == '__main__':
