@@ -9,7 +9,6 @@ setup(
         'diskcache',
         'pycocotools',
         'scipy',
-        'skimage',
         'scikit-image',
     ],
     description='A pruned, quantized, compiled, nested and batched implementation of nested tensor',
