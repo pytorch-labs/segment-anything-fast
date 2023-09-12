@@ -223,7 +223,8 @@ def build_data(coco_img_ids,
             # batch[0].append(x[0])
             coords_list = predictor.transform.apply_coords(
                 np.array(coords_list), I.shape[:2])
-            coords_list = torch.tensor(coords_list, dtype=torch.float)
+            coords_list = torch.tensor(coords_list,
+                                       dtype=(torch.half if use_half_decoder else torch.float))
 
             batch[1].append(coords_list.reshape(-1))
             batch[2].append(coords_list.size())
@@ -250,7 +251,17 @@ def build_data(coco_img_ids,
             dtype = torch.float16 if use_half else torch.float32
             if sizes is not None:
                 data = [d.view(s) for (d, s) in zip(data, sizes)]
-            return torch.nested.nested_tensor(data, dtype=dtype)
+
+            non_first_sizes = [s[1:] for s in sizes]
+            at_most_first_ragged = all([s == non_first_sizes[0] for s in non_first_sizes])
+            if at_most_first_ragged:
+                buffer = torch.cat(data, dim=0)
+                offsets = torch.cat([torch.zeros(1, dtype=torch.int64),
+                                     torch.tensor([t.shape[0] for t in data]).cumsum(dim=0)])
+                from torch.nested._internal.nested_tensor import NestedTensor
+                return NestedTensor(buffer, offsets=offsets, nb_tensors=len(data))
+            else:
+                return torch.nested.nested_tensor(data, dtype=dtype)
 
         if pad_input_image_batch:
             batch[0] = cat_and_cast(batch[0], use_half)

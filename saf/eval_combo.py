@@ -49,8 +49,7 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
 
     nt_coords = batch[1].to(device=device, non_blocking=True)
     nt_gt_masks = batch[4].to(device=device, non_blocking=True)
-    nt_fg_labels = torch.nested.nested_tensor([torch.ones(
-        (coords.size(0), 1), dtype=torch.int, device=device) for coords in nt_coords.unbind()])
+    nt_fg_labels = torch.ones_like(nt_coords).prod(dim=-1, keepdim=True)
     predictor.reset_image()
     predictor.original_sizes = [d[1].shape[:2] for d in datapoints]
     predictor.input_sizes = [d[2] for d in datapoints]
@@ -253,7 +252,8 @@ def run(
                                                     batch_size=batch_size,
                                                     collate_fn=build_batch,
                                                     num_workers=num_workers,
-                                                    pin_memory=True)
+                                                    # TODO: Support pin_memory for NT
+                                                    pin_memory=False)
     results, avg_ms_per_img = build_results(batched_data_iter,
                                             predictor,
                                             mask_debug_out_dir,
