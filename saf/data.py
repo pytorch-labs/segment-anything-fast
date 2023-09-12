@@ -223,8 +223,11 @@ def build_data(coco_img_ids,
             # batch[0].append(x[0])
             coords_list = predictor.transform.apply_coords(
                 np.array(coords_list), I.shape[:2])
-            coords_list = torch.tensor(coords_list,
-                                       dtype=(torch.half if use_half_decoder else torch.float))
+            if use_nested_tensor:
+                coords_list = torch.tensor(coords_list,
+                                           dtype=(torch.half if use_half_decoder else torch.float))
+            else:
+                coords_list = torch.tensor(coords_list, dtype=torch.float32)
 
             batch[1].append(coords_list.reshape(-1))
             batch[2].append(coords_list.size())

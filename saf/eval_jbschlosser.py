@@ -6,7 +6,7 @@ home = "/home/jbschlosser"
 
 python_path = os.path.join(
     # home, "miniconda3/envs/pytorch-3.10-nightly20230727/bin/python")
-    home, "anaconda3/bin/python")
+    home, ".conda/envs/main/bin/python")
 
 script_path = os.path.join(
     home, "misc/segment-anything-fast/saf/eval_combo.py")
@@ -98,8 +98,8 @@ def run_experiment(idx,
         print("idx,time,sam_commit_name,pytorch_version," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
-# run_experiment("130",  "predict-masks-nested", "vit_b", 2, 2, use_half=True,  use_compile="max-autotune", use_nested_tensor=False)
-run_experiment("131",  "nt-subclass", "vit_b", 2, 0, use_half=True,  use_compile="default", use_nested_tensor=True, capture_output=False)
+run_experiment("130",  "nt-subclass", "vit_b", 2, 0, use_half=True,  use_compile="default", use_nested_tensor=False, capture_output=False)
+run_experiment("131",  "nt-subclass", "vit_b", 2, 0, use_half=True,  use_compile="default", use_nested_tensor=True, capture_output=True)
 # run_experiment("010",  "default",              "vit_b",  1,  0, print_header=True)
 # run_experiment("011",  "default",              "vit_b",  1, 32)
 # run_experiment("012",  "default",              "vit_b", 20, 32)
