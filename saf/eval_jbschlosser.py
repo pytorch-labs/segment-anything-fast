@@ -21,7 +21,7 @@ sam_commits = {
         "predict-masks-nested": "187e2359f9eb3b00d43487a1ec3db849964753e4",
         "use-rel-pos": "d2fa29d580eaf7928eef702cd71d133b943c30cf",
         "hacky-nested-encoder": "8f2fc3cc90b222a2431d4c43379282e36f021b69",
-        "nt-subclass": "eaec4a13b220f41854fdefeb56ae66f9f3f1d193"}
+        "nt-subclass": "c398de49bda7f26aa0b2917a7f3e9eacf74729db"}
 
 def change_sam_commit(commit_name):
     assert commit_name in sam_commits
@@ -99,7 +99,7 @@ def run_experiment(idx,
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
 run_experiment("130",  "nt-subclass", "vit_b", 2, 0, use_half=True,  use_compile="default", use_nested_tensor=False, capture_output=False)
-run_experiment("131",  "nt-subclass", "vit_b", 2, 0, use_half=True,  use_compile="default", use_nested_tensor=True, capture_output=True)
+run_experiment("131",  "nt-subclass", "vit_b", 2, 0, use_half=True,  use_compile="default", use_nested_tensor=True, capture_output=False)
 # run_experiment("010",  "default",              "vit_b",  1,  0, print_header=True)
 # run_experiment("011",  "default",              "vit_b",  1, 32)
 # run_experiment("012",  "default",              "vit_b", 20, 32)
