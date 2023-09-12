@@ -21,7 +21,7 @@ sam_commits = {
         "predict-masks-nested": "187e2359f9eb3b00d43487a1ec3db849964753e4",
         "use-rel-pos": "d2fa29d580eaf7928eef702cd71d133b943c30cf",
         "hacky-nested-encoder": "8f2fc3cc90b222a2431d4c43379282e36f021b69",
-        "nt-subclass": "823a7104d7ee254a716726c29007a061998836a0"}
+        "nt-subclass": "eaec4a13b220f41854fdefeb56ae66f9f3f1d193"}
 
 def change_sam_commit(commit_name):
     assert commit_name in sam_commits
