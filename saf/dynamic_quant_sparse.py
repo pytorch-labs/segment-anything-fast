@@ -188,7 +188,7 @@ class SparseDynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         return Y
 
     @classmethod
-    def from_float(cls, mod: torch.nn.Linear) -> 'DynamicallyPerAxisQuantizedLinear':
+    def from_float(cls, mod: torch.nn.Linear) -> 'SparseDynamicallyPerAxisQuantizedLinear':
         """
         Converts a `mod` of class `torch.nn.Linear` to the dynamically quantized version of it.
 

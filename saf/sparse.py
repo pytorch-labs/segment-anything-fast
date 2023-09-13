@@ -1,3 +1,4 @@
+import torch
 
 # Sparsity helper functions
 def apply_fake_sparsity(model):
