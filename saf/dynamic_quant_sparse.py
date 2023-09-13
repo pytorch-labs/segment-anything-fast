@@ -173,15 +173,12 @@ class SparseDynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         the last axis using the `quant_int8_dynamic_per_token_linear` function.
 
         We artifically limit the quantization value to int4 range to ensure we stay within the range of fp16.
-
-        This method will use cuSPASRELt to perform sparse matmul
+        This method will use cuSPASRELt to perform sparse matmul.
 
         Args:
             X (torch.Tensor): The input tensor to the sparse quantized linear layer.
-
         Returns:
             torch.Tensor: The output tensor after the sparse quantized matmul and rescale.
-
         """
         Y = sparse_quant_int8_dynamic_per_token_linear(
             X, self.W_int_repr, self.W_scales, self.bias, X.dtype)
@@ -190,16 +187,13 @@ class SparseDynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
     @classmethod
     def from_float(cls, mod: torch.nn.Linear) -> 'SparseDynamicallyPerAxisQuantizedLinear':
         """
-        Converts a `mod` of class `torch.nn.Linear` to the dynamically quantized version of it.
-
+        Converts a `mod` of class `torch.nn.Linear` to the sparse dynamically quantized version of it.
         Note: this class does not require calibration.
 
         Args:
             mod (torch.nn.Linear): The original `torch.nn.Linear` module to convert.
-
         Returns:
-            DynamicallyPerAxisQuantizedLinear: The converted quantized linear module.
-
+            SparseDynamicallyPerAxisQuantizedLinear: The converted sparse quantized linear module.
         """
 
         # create the new module with a toy size to ensure initialization is fast

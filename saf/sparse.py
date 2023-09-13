@@ -7,9 +7,10 @@ def apply_fake_sparsity(model):
     It uses the torch.ao.pruning flow.
     """
     # torch.ao.pruning flow
+    from torch.ao.pruning import WeightNormSparsifier
     sparse_config = []
     for name, mod in model.named_modules():
-        if all_linear(mod, name):
+        if isinstance(mod, torch.nn.Linear):
             sparse_config.append({"tensor_fqn": f"{name}.weight"})
 
     sparsifier = WeightNormSparsifier(sparsity_level=1.0,

@@ -103,9 +103,9 @@ def run_experiment(idx,
         print("idx,time,sam_commit_name,pytorch_version," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
-run_experiment("017",  "codesign",             "vit_b", 60, 32, use_half=True,  use_compile="max-autotune", capture_output=False,print_header=False)
-run_experiment("022",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="dynamic_quant",        extra_args=["--epilogue_fusion_first", "True"], print_header=True)
-# run_experiment("023",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="int4_dynamic_quant_sparse", capture_output=False, print_header=False)
+# run_experiment("017",  "codesign",             "vit_b", 60, 32, use_half=True,  use_compile="max-autotune", capture_output=False,print_header=False)
+# run_experiment("022",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="sparse",        extra_args=["--epilogue_fusion_first", "True"], print_header=True)
+run_experiment("023",  "sdpa-decoder",         "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",               compress="sparse", capture_output=False, print_header=False)
 import sys; sys.exit(0)
 
 # run_experiment("031",  "use-rel-pos", "vit_b", 60, 32, use_half=True,  use_compile="max-autotune",  compress="static_quant",                              use_nested_tensor=True,  limit=720, profile_path="/home/cpuhrsch/tmp/traces/nt.json.gz", capture_output=False, extra_args=["--use_rel_pos", "False"])
