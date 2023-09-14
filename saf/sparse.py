@@ -64,13 +64,11 @@ class SparseLinear(torch.nn.Linear):
         """
         Converts a `mod` of class `torch.nn.Linear` to the 2:4 sparse version of it.
         This compresses the weights of mod and stores it for future use.
-
         Args:
             mod (torch.nn.Linear): The original `torch.nn.Linear` module to convert.
 
         Returns:
             SparseLinear: The converted sparse linear module.
-
         """
 
         # create the new module with a toy size to ensure initialization is fast

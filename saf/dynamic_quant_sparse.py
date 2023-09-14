@@ -1,6 +1,3 @@
-"""
-Sparsity API for Blueberries
-"""
 import torch
 
 # Quantization helper functions
@@ -189,7 +186,6 @@ class SparseDynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         """
         Converts a `mod` of class `torch.nn.Linear` to the sparse dynamically quantized version of it.
         Note: this class does not require calibration.
-
         Args:
             mod (torch.nn.Linear): The original `torch.nn.Linear` module to convert.
         Returns:
@@ -207,7 +203,7 @@ class SparseDynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         W_int_repr, W_scales, _W_zps = dynamically_quantize_per_channel(
             mod.weight, -8, 7, torch.int8)
         new_mod.register_buffer('W_int_repr', torch._cslt_compress(W_int_repr.contiguous()))
-        new_mod.W_scales = nn.Parameter(W_scales)
+        new_mod.W_scales = torch.nn.Parameter(W_scales)
         new_mod.bias = mod.bias
         del new_mod.weight
 
