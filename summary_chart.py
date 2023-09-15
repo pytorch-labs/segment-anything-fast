@@ -1,14 +1,16 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high):
+def make_sub_chart(df, ax, title, category_column, value_column, ylim_low=None, ylim_high=None):
     ax.bar(df[category_column], df[value_column])
     
     # Customize the chart labels and title
     ax.set_xlabel(category_column)
     ax.set_ylabel(value_column)
     ax.set_title(title)
-    ax.set_ylim(ylim_low, ylim_high)
+    if ylim_low is None:
+        assert ylim_high is None
+        ax.set_ylim(ylim_low, ylim_high)
 
     tick_positions = ax.get_yticks()
     for tick in tick_positions:
@@ -16,7 +18,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
 
     
 
-def make_row_chart(df, value_column, ax1, ax2, ylim_low, ylim_high, title, relative=False):
+def make_row_chart(df, value_column, ax1, ax2, ylim_low=None, ylim_high=None, title="", relative=False):
     category_column = "idx"
 
     vit_b_df = df[df['sam_model_type'] == "vit_b"]
@@ -40,7 +42,7 @@ print(df.columns)
 
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 6))
 make_row_chart(df, "img_s(avg)", ax1, ax2, 1.0, 2.0, "Speedup", relative=True)
-make_row_chart(df, "memory(MiB)", ax3, ax4, 0.0, 1.0, "Memory savings")
+make_row_chart(df, "memory(MiB)", ax3, ax4, title="Memory savings")
 plt.tick_params(axis='both', which='both', length=10)
 plt.tight_layout()
 
