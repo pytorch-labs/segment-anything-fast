@@ -16,7 +16,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
 
     
 
-def make_row_chart(df, value_column, ax1, ax2, ylim_low, ylim_high, title):
+def make_row_chart(df, value_column, ax1, ax2, ylim_low, ylim_high, title, relative=False):
     category_column = "idx"
 
     vit_b_df = df[df['sam_model_type'] == "vit_b"]
@@ -25,8 +25,9 @@ def make_row_chart(df, value_column, ax1, ax2, ylim_low, ylim_high, title):
     vit_b_df = vit_b_df.copy()
     vit_h_df = vit_h_df.copy()
 
-    vit_b_df[value_column] = vit_b_df[value_column].div(vit_b_df[value_column].iloc[0])
-    vit_h_df[value_column] = vit_h_df[value_column].div(vit_h_df[value_column].iloc[0])
+    if relative:
+        vit_b_df[value_column] = vit_b_df[value_column].div(vit_b_df[value_column].iloc[0])
+        vit_h_df[value_column] = vit_h_df[value_column].div(vit_h_df[value_column].iloc[0])
     
     make_sub_chart(vit_b_df, ax1, f"{title} for vit_b", category_column, value_column, ylim_low, ylim_high)
     make_sub_chart(vit_h_df, ax2, f"{title} for vit_h", category_column, value_column, ylim_low, ylim_high)
@@ -38,7 +39,7 @@ print(df)
 print(df.columns)
 
 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 6))
-make_row_chart(df, "img_s(avg)", ax1, ax2, 1.0, 2.0, "Speedup")
+make_row_chart(df, "img_s(avg)", ax1, ax2, 1.0, 2.0, "Speedup", relative=True)
 make_row_chart(df, "memory(MiB)", ax3, ax4, 0.0, 1.0, "Memory savings")
 plt.tick_params(axis='both', which='both', length=10)
 plt.tight_layout()
