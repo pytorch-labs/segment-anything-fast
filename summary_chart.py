@@ -10,6 +10,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low=None, 
     ax.set_title(title)
     if ylim_low is None:
         assert ylim_high is None
+    else:
         ax.set_ylim(ylim_low, ylim_high)
 
     tick_positions = ax.get_yticks()
