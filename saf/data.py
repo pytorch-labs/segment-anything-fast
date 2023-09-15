@@ -240,7 +240,7 @@ def build_data(coco_img_ids,
 
         def cat_and_cast(b, use_half):
             b = torch.cat(b) if len(b) > 0 else None
-            if use_half:
+            if use_half and b is not None:
                 return b.half()
             return b
 

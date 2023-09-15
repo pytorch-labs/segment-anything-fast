@@ -99,7 +99,6 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
                 # y_dot_int32 = safe_int_mm(tmp, w_vals_int8_t)
                 y_dot_int32 = torch._int_mm(tmp, w_vals_int8_t)
                 y_dot_int32 = y_dot_int32.reshape(*x_vals_int8.shape[:-1], -1)
-                y_dot_float64 = y_dot_int32.to(torch.float64)
 
                 #
                 # 2. rescale the output
@@ -113,9 +112,9 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
 
                 # print("x_scales: ", x_scales.dtype)
                 # print("w_scales: ", w_scales.dtype)
-                y = y_dot_float64 * x_scales * w_scales
+                y = y_dot_int32 * x_scales * w_scales
                 # can downcast only at the very end
-                y = y.to(out_dtype)
+                y = y.to(out_dtype) #.realize()
                 return y
 
             # like F.linear, but with int8 dynamic quantization of activation,

@@ -10,13 +10,14 @@ def quantize_activation_per_token(t, scales):
     t = torch.round(t / scales).clamp(-127, 127).to(torch.int8)
     return t
 
-def quantize_activation_per_token_absmax(t, absmax):
-    n_bits = 8
-    # if the shape of t is [B, N, K], the shape of scales will be [B, N, 1]
-    # want float scales to avoid overflows
-    scales = absmax.float()
-    q_max = 2 ** (n_bits - 1) - 1
-    scales.clamp_(min=1e-5).div_(q_max)
+def quantize_activation_per_token_absmax(t, scales): # absmax):
+    # n_bits = 8
+    # # if the shape of t is [B, N, K], the shape of scales will be [B, N, 1]
+    # # want float scales to avoid overflows
+    # scales = absmax.float()
+    # q_max = 2 ** (n_bits - 1) - 1
+    # scales.clamp_(min=1e-5).div_(q_max)
+
     # Note: the original smoothquant does not clamp to qmin/qmax here,
     # but some of the tests with bfloat16 ended up with a flipped sign
     # if we don't clamp.  TODO(future) look into this further.
@@ -71,7 +72,6 @@ def quant_int8_dynamic_per_token_linear(
         # y_dot_int32 = safe_int_mm(tmp, w_vals_int8_t)
         y_dot_int32 = torch._int_mm(tmp, w_vals_int8_t)
         y_dot_int32 = y_dot_int32.reshape(*x_vals_int8.shape[:-1], -1)
-        y_dot_float64 = y_dot_int32.to(torch.float64)
 
         #
         # 2. rescale the output
@@ -83,9 +83,8 @@ def quant_int8_dynamic_per_token_linear(
 
         assert x_scales.dtype == torch.float, f"x_scales needs to be a torch.float32 but got {x_scales.dtype}"
 
-        # print("x_scales: ", x_scales.dtype)
-        # print("w_scales: ", w_scales.dtype)
-        y = y_dot_float64 * x_scales * w_scales
+        y = y_dot_int32 * x_scales * w_scales
+        # y = y_dot_int32 * w_scales
         # can downcast only at the very end
         y = y.to(out_dtype)
         return y
@@ -96,7 +95,7 @@ def quant_int8_dynamic_per_token_linear(
         x_vals_int8, x_scales, w_vals_int8_t, w_scales, out_dtype)
     if bias is not None:
         mm_out += bias
-    return mm_out
+    return mm_out# .realize()
 
 class StaticallyPerAxisQuantizedLinear(torch.nn.Linear):
     """
@@ -112,6 +111,7 @@ class StaticallyPerAxisQuantizedLinear(torch.nn.Linear):
     ) -> None:
         super().__init__(in_features, out_features, bias)
         self.calibration_limit = 10
+        self.x_absmax_tmp = None
         self.x_absmax = None
         self.calibration_count = 0
         # torch._dynamo.disable(self.set_x_absmax)
@@ -134,9 +134,21 @@ class StaticallyPerAxisQuantizedLinear(torch.nn.Linear):
     def set_x_absmax(self, X):
         x_absmax = X.abs().amax(dim=-1, keepdim=True)
         if self.x_absmax is None:
-            self.x_absmax = x_absmax
+            self.x_absmax_tmp = x_absmax
+            n_bits = 8
+            # if the shape of t is [B, N, K], the shape of scales will be [B, N, 1]
+            # want float scales to avoid overflows
+            self.x_absmax = self.x_absmax_tmp.float()
+            q_max = 2 ** (n_bits - 1) - 1
+            self.x_absmax.clamp_(min=1e-5).div_(q_max)
         else:
-            self.x_absmax = torch.maximum(self.x_absmax, X.abs().amax(dim=-1, keepdim=True))
+            self.x_absmax_tmp = torch.maximum(self.x_absmax_tmp, X.abs().amax(dim=-1, keepdim=True))
+            n_bits = 8
+            # if the shape of t is [B, N, K], the shape of scales will be [B, N, 1]
+            # want float scales to avoid overflows
+            self.x_absmax = self.x_absmax_tmp.float()
+            q_max = 2 ** (n_bits - 1) - 1
+            self.x_absmax.clamp_(min=1e-5).div_(q_max)
 
     @classmethod
     def from_float(cls, mod: torch.nn.Linear) -> 'StaticallyPerAxisQuantizedLinear':

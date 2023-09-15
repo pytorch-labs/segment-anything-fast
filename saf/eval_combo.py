@@ -104,6 +104,7 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
         )
         entry = create_result_entry(anns, gt_masks, masks, scores, idx)
         result_batch += entry
+        # break
     return result_batch, input_image_batch.size(0)
 
 
@@ -151,7 +152,7 @@ def build_results(batched_data_iter,
     end_event.record()
     torch.cuda.synchronize()
     avg_ms_per_img = None
-    if num_datapoints > 0:
+    if num_images > 0:
         avg_ms_per_img = start_event.elapsed_time(end_event)
         avg_ms_per_img = avg_ms_per_img / num_images
 
@@ -169,6 +170,15 @@ def profiler_runner(path, fn, *args, **kwargs):
             record_shapes=True) as prof:
         result = fn(*args, **kwargs)
     prof.export_chrome_trace(path)
+    return result
+
+def profile_top_runner(fn, *args, **kwargs):
+    with torch.profiler.profile(
+            activities=[torch.profiler.ProfilerActivity.CPU,
+                        torch.profiler.ProfilerActivity.CUDA],
+            record_shapes=True) as prof:
+        result = fn(*args, **kwargs)
+    print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
     return result
 
 
@@ -195,9 +205,10 @@ def run(
     use_rel_pos=True,
     pad_input_image_batch=True,
     profile_path=None,
+    profile_top=False,
 ):
     from torch._inductor import config as tritonconfig
-    # tritonconfig.triton.unique_kernel_names = True
+    tritonconfig.triton.unique_kernel_names = True
     tritonconfig.epilogue_fusion_first = epilogue_fusion_first
 
     # https://github.com/facebookresearch/segment-anything/tree/main#model-checkpoints
@@ -275,9 +286,13 @@ def run(
                                                     num_workers=num_workers,
                                                     pin_memory=True)
     runner = identity_runner
+
     if profile_path is not None:
         import functools
         runner = functools.partial(profiler_runner, profile_path)
+
+    if profile_top:
+        runner = profile_top_runner
 
     results, avg_ms_per_img, num_batches, num_images = runner(build_results,
                                                               batched_data_iter,
@@ -297,7 +312,10 @@ def run(
 
     results = [[r[0], r[1], r[2], r[3].item()] for r in results]
 
-    img_s = 1000 / avg_ms_per_img
+    img_s, batch_ms_batch_size = None, None
+    if avg_ms_per_img is not None:
+        img_s = 1000 / avg_ms_per_img
+        batch_ms_batch_size = (avg_ms_per_img * num_images) / num_batches / batch_size
 
     mIoU = calculate_miou(results, mask_debug_out_dir, True, cat_id_to_cat)
     max_memory_allocated_bytes = torch.cuda.max_memory_allocated()
@@ -306,9 +324,9 @@ def run(
     max_memory_allocated_bytes = max_memory_allocated_bytes >> 20
 
     if print_header:
-        print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s(avg)", "mIoU", "use_compile",
+        print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s(avg)", "batch_ms(avg)/batch_size", "mIoU", "use_compile",
               "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers", "num_batches", "num_images", "profile_path"]))
-    print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, mIoU, use_compile,
+    print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, batch_ms_batch_size, mIoU, use_compile,
           use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers, num_batches, num_images, profile_path])))
 
 
