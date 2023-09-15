@@ -3,7 +3,6 @@ import torch
 import fire
 from metrics import calculate_miou, create_result_entry
 from data import build_data, setup_coco_img_ids
-from segment_anything import sam_model_registry, SamPredictor
 
 torch._dynamo.config.cache_size_limit = 50000
 
@@ -206,6 +205,7 @@ def run(
     pad_input_image_batch=True,
     profile_path=None,
     profile_top=False,
+    use_local_sam_fork=False,
 ):
     from torch._inductor import config as tritonconfig
     tritonconfig.triton.unique_kernel_names = True
@@ -219,6 +219,10 @@ def run(
         'vit_b': f'{sam_checkpoint_base_path}/sam_vit_b_01ec64.pth',
     }
 
+    if use_local_sam_fork:
+        from local_segment_anything_fork import sam_model_registry, SamPredictor
+    else:
+        from segment_anything import sam_model_registry, SamPredictor
     checkpoint_path = model_type_to_checkpoint[sam_model_type]
     sam = sam_model_registry[sam_model_type](checkpoint=checkpoint_path).cuda()
     predictor = SamPredictor(sam)
