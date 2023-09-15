@@ -2,12 +2,12 @@ idx,time,sam_commit_name,pytorch_version,sam_model_type,batch_size,memory(MiB),m
 "baseline",3.8976942181587217,codesign,2.1.0a0+git5b5612c,vit_b,60,58411,72,37.18006243842218,26.431664156626503,0.5341064946904616,max-autotune,True,None,False,True,False,False,True,True,32,83,4894,None
 "SDPA",3.3661941051483155,sdpa-decoder,2.1.0a0+git5b5612c,vit_b,60,34133,42,41.53589010896912,23.65980170682731,0.5336233759150143,max-autotune,True,None,False,True,False,False,True,True,32,83,4894,None
 "Triton",3.1636156320571898,local-fork,2.1.0a0+git5b5612c,vit_b,60,11813,14,45.585160139531204,21.55813253012048,0.5320065354689526,max-autotune,True,None,False,True,False,False,True,True,32,83,4894,None
-"NestedTensor",3.265655795733134,local-fork,2.1.0a0+git5b5612c,vit_b,60,12664,15,55.29640856520917,17.77205697791165,0.5317058928524404,max-autotune,True,None,False,True,False,True,True,True,32,83,4894,None
+"NT",3.265655795733134,local-fork,2.1.0a0+git5b5612c,vit_b,60,12664,15,55.29640856520917,17.77205697791165,0.5317058928524404,max-autotune,True,None,False,True,False,True,True,True,32,83,4894,None
 "int8",3.5060489853223165,local-fork,2.1.0a0+git5b5612c,vit_b,60,17328,21,57.11659797950326,17.20569779116466,0.5321179687443818,max-autotune,True,dynamic_quant,False,True,False,True,True,True,32,83,4894,None
 "sparse",3.8929453253746034,local-fork,2.1.0a0+git5b5612c,vit_b,60,12550,15,56.767312035623114,17.311563441265058,0.1570897296580624,max-autotune,True,dynamic_quant_sparse,False,True,False,True,True,True,32,83,4894,None
 "baseline",7.761052978038788,codesign,2.1.0a0+git5b5612c,vit_h,40,55347,68,14.695864629225397,67.41527847782257,0.583817636433208,max-autotune,True,None,False,True,False,False,True,True,32,124,4914,None
 "SDPA",7.29305883248647,sdpa-decoder,2.1.0a0+git5b5612c,vit_h,40,33932,41,15.628977178023817,63.39031628024194,0.5838688011447559,max-autotune,True,None,False,True,False,False,True,True,32,124,4914,None
 "Triton",7.658917470773061,local-fork,2.1.0a0+git5b5612c,vit_h,40,17928,22,16.521791390529472,59.964793346774194,0.5842784692867434,max-autotune,True,None,False,True,False,False,True,True,32,124,4914,None
-"NestedTensor",7.47540576060613,local-fork,2.1.0a0+git5b5612c,vit_h,40,17849,22,16.866109382588505,58.740625,0.5842325617415384,max-autotune,True,None,False,True,False,True,True,True,32,124,4914,None
+"NT",7.47540576060613,local-fork,2.1.0a0+git5b5612c,vit_h,40,17849,22,16.866109382588505,58.740625,0.5842325617415384,max-autotune,True,None,False,True,False,True,True,True,32,124,4914,None
 "int8",7.374012160301208,local-fork,2.1.0a0+git5b5612c,vit_h,40,24053,29,19.624086329606477,50.48519405241936,0.58465664674772,max-autotune,True,dynamic_quant,False,True,False,True,True,True,32,124,4914,None
 "sparse",7.405766332149506,local-fork,2.1.0a0+git5b5612c,vit_h,40,15618,19,21.52604561444192,46.02451486895162,0.045320915019285174,max-autotune,True,dynamic_quant_sparse,False,True,False,True,True,True,32,124,4914,None

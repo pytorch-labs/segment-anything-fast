@@ -111,14 +111,14 @@ def run_experiment(idx,
 run_experiment("baseline",       "codesign",                    "vit_b", 60, 32, use_half=True,  use_compile="max-autotune", print_header=True)
 run_experiment("SDPA",           "sdpa-decoder",                "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
 run_experiment("Triton",         "local-fork",                  "vit_b", 60, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("NestedTensor",   "local-fork",                  "vit_b", 60, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
+run_experiment("NT",   "local-fork",                  "vit_b", 60, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
 run_experiment("int8",           "local-fork",                  "vit_b", 60, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
 run_experiment("sparse",         "local-fork",                  "vit_b", 60, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant_sparse")
 
 run_experiment("baseline",       "codesign",                    "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
 run_experiment("SDPA",           "sdpa-decoder",                "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
 run_experiment("Triton",         "local-fork",                  "vit_h", 40, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("NestedTensor",   "local-fork",                  "vit_h", 40, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
+run_experiment("NT",   "local-fork",                  "vit_h", 40, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
 run_experiment("int8",           "local-fork",                  "vit_h", 40, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
 run_experiment("sparse",         "local-fork",                  "vit_h", 40, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant_sparse")
 
