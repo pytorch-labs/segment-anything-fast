@@ -41,9 +41,10 @@ df = pd.read_csv(csv_file)
 print(df)
 print(df.columns)
 
-fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 6))
+fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(3, 2, figsize=(10, 10))
 make_row_chart(df, "img_s(avg)", ax1, ax2, 1.0, 2.0, "Speedup", relative=True)
 make_row_chart(df, "memory(MiB)", ax3, ax4, title="Memory savings")
+make_row_chart(df, "mIoU", ax5, ax6, title="Accuracy")
 plt.tick_params(axis='both', which='both', length=10)
 plt.tight_layout()
 
