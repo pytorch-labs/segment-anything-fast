@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
 
 
 def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format):
@@ -38,9 +39,10 @@ def make_row_chart(df, value_column, ax1, ax2, ax3, ylim_low=None, ylim_high=Non
         make_sub_chart(vit_b_df, ax1, f"{title} for {sam_model_type}",
                        category_column, value_column, ylim_low, ylim_high, data_format)
     helper("vit_b", ax1)
-    helper("vit_l", ax3)
-    helper("vit_h", ax2)
+    helper("vit_l", ax2)
+    helper("vit_h", ax3)
 
+matplotlib.rcParams.update({'font.size': 12})
 
 csv_file = "results.csv"
 df = pd.read_csv(csv_file)
