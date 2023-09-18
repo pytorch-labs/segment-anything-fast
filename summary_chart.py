@@ -54,7 +54,7 @@ fig, ((ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9)
       ) = plt.subplots(3, 3, figsize=(20, 20))
 make_row_chart(df, "img_s(avg)", ax1, ax2, ax3, 0.0, 100.0,
                "Images per second", data_format="{:.2f}")
-make_row_chart(df, "memory(MiB)", ax4, ax5, ax6,
+make_row_chart(df, "memory(MiB)", ax4, ax5, ax6, 0, 80000,
                title="Memory savings", data_format="{:.0f}")
 make_row_chart(df, "mIoU", ax7, ax8, ax9, 0.0, 1.0,
                title="Accuracy", data_format="{:.2f}")
