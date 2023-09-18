@@ -256,10 +256,11 @@ def run(
             from static_quant import set_x_absmax
             set_x_absmax(predictor.model.image_encoder, weights)
     elif compress == "sparse":
-        raise NotImplementedError(f"Unsupported compress {compress}")
-    elif compress == "dynamic_quant_sparse":
-        from dynamic_quant_sparse import apply_dynamic_quant_sparse
-        apply_dynamic_quant_sparse(predictor.model.image_encoder)
+        from sparse import apply_sparse
+        apply_sparse(predictor.model.image_encoder)
+    elif compress == "int4_dynamic_quant_sparse":
+        from dynamic_quant_sparse import apply_int4_dynamic_quant_sparse
+        apply_int4_dynamic_quant_sparse(predictor.model.image_encoder)
     elif compress == "static_quant_sparse":
         raise NotImplementedError(f"Unsupported compress {compress}")
     elif compress == "sparse":
