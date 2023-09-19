@@ -108,6 +108,15 @@ def run_experiment(idx,
         print("technique,time,sam_commit_name,pytorch_version," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
+# run_experiment("int8",           "local-fork",                  "vit_b", 20, 0, limit=20, use_half=True, use_nested_tensor=True, compress="dynamic_quant", capture_output=False)
+# run_experiment("int8",           "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant", capture_output=False)
+# run_experiment("Triton",         "local-fork",                  "vit_h", 20, 32, use_half=True,  use_compile="max-autotune", capture_output=False)
+# run_experiment("int8",           "local-fork",                  "vit_h", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant", capture_output=False)
+run_experiment("int8",           "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+run_experiment("int8",           "local-fork",                  "vit_l", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+run_experiment("int8",           "local-fork",                  "vit_h", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+import sys; sys.exit(0)
+
 run_experiment("float32",        "default",                     "vit_b", 20, 32, print_header=True)
 run_experiment("float16",        "codesign",                    "vit_b", 20, 32, use_half=True)
 run_experiment("compile",        "codesign",                    "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
