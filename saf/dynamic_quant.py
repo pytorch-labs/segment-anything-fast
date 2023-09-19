@@ -5,6 +5,7 @@ from typing import Tuple, Optional
 
 import torch
 from torch._dynamo import is_compiling as dynamo_is_compiling
+from int_mm import _int_mm_dequant
 
 def quantize_activation_per_token(t, scales):
     t = torch.round(t / scales).clamp(-127, 127).to(torch.int8)
@@ -93,12 +94,12 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
                 # 1. do the matrix form of dot(X_i, W_j)
                 #
 
-                # print("0ASDF")
+
                 # TODO(before land): add test case for input with bsz
                 tmp = x_vals_int8.reshape(-1, x_vals_int8.shape[-1])
-                # y_dot_int32 = safe_int_mm(tmp, w_vals_int8_t)
-                y_dot_int32 = torch._int_mm(tmp, w_vals_int8_t)
-                y_dot_int32 = y_dot_int32.reshape(*x_vals_int8.shape[:-1], -1)
+                x_scales_flat = x_scales.view(tmp.size(0), 1)
+                w_scales_flat = w_scales.unsqueeze(0)
+                # y_dot_int32 = torch._int_mm(tmp, w_vals_int8_t)
 
                 #
                 # 2. rescale the output
@@ -110,12 +111,13 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
 
                 assert x_scales.dtype == torch.float, f"x_scales needs to be a torch.float32 but got {x_scales.dtype}"
 
-                # print("x_scales: ", x_scales.dtype)
-                # print("w_scales: ", w_scales.dtype)
-                y = y_dot_int32 * x_scales * w_scales
-                # can downcast only at the very end
-                y = y.to(out_dtype) #.realize()
-                return y
+                # y = y_dot_int32 * x_scales_flat * w_scales_flat
+                # # can downcast only at the very end
+                # y = y.to(out_dtype)
+
+                # y = _int_mm_dequant(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, out_dtype)
+                y = torch.ops.my_int_mm.int_mm(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, out_dtype)
+                return y.reshape(*x_vals_int8.shape[:-1], -1)
 
             # like F.linear, but with int8 dynamic quantization of activation,
             # and a quantized weight
