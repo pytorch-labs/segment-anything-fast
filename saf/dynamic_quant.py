@@ -5,7 +5,7 @@ from typing import Tuple, Optional
 
 import torch
 from torch._dynamo import is_compiling as dynamo_is_compiling
-from int_mm import _int_mm_dequant
+from .int_mm import _int_mm_dequant
 
 def quantize_activation_per_token(t, scales):
     t = torch.round(t / scales).clamp(-127, 127).to(torch.int8)
