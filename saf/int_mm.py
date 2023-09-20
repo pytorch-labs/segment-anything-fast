@@ -95,7 +95,7 @@ def matmul_kernel_with_block_pointers(
 
 class MyIntMMLibrary:
     lib = torch.library.Library("my_int_mm", "DEF")
-    ops_table: dict[tuple[str, str], callable] = {}
+    ops_table = {}
 
     @classmethod
     def registerOp(cls, op_key, full_schema, op_impl, dispatch_key):
