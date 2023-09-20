@@ -65,7 +65,8 @@ def run_experiment(idx,
                    print_header=False,
                    capture_output=True,
                    limit=None,
-                   profile_path=None):
+                   profile_path=None,
+                   profile_top=False):
     args = root_cmd
     args = args + ["--sam_model_type", model_type]
     args = args + ["--batch_size", str(batch_size)]
@@ -86,6 +87,8 @@ def run_experiment(idx,
         args = args + ["--limit", str(limit)]
     if profile_path is not None:
         args = args + ["--profile-path", profile_path]
+    if profile_top:
+        args = args + ["--profile-top", "True"]
     if extra_args is None:
         extra_args = []
     args = args + extra_args
@@ -107,6 +110,11 @@ def run_experiment(idx,
         header = result.stdout.decode().split("\n")[-3]
         print("technique,time,sam_commit_name,pytorch_version," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
+
+run_experiment("int8",           "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+run_experiment("int8",           "local-fork",                  "vit_l", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+run_experiment("int8",           "local-fork",                  "vit_h", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+import sys; sys.exit(0)
 
 run_experiment("float32",        "default",                     "vit_b", 20, 32, print_header=True)
 run_experiment("float16",        "codesign",                    "vit_b", 20, 32, use_half=True)
