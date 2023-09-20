@@ -3,20 +3,6 @@ import torch
 import triton
 import triton.language as tl
 
-
-# @triton.autotune(
-#     configs=[
-#         triton.Config({'BLOCK_SIZE_M': 128, 'BLOCK_SIZE_N': 256, 'BLOCK_SIZE_K': 64, 'GROUP_SIZE_M': 8}, num_stages=4, num_warps=4),
-#         triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_N': 256, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8}, num_stages=4, num_warps=4),
-#         triton.Config({'BLOCK_SIZE_M': 128, 'BLOCK_SIZE_N': 128, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8}, num_stages=4, num_warps=4),
-#         triton.Config({'BLOCK_SIZE_M': 128, 'BLOCK_SIZE_N': 64, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8}, num_stages=4, num_warps=4),
-#         triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_N': 128, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8}, num_stages=4, num_warps=4),
-#         triton.Config({'BLOCK_SIZE_M': 128, 'BLOCK_SIZE_N': 32, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8}, num_stages=4, num_warps=4),
-#         triton.Config({'BLOCK_SIZE_M': 64, 'BLOCK_SIZE_N': 32, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8}, num_stages=5, num_warps=2),
-#         triton.Config({'BLOCK_SIZE_M': 32, 'BLOCK_SIZE_N': 64, 'BLOCK_SIZE_K': 32, 'GROUP_SIZE_M': 8}, num_stages=5, num_warps=2),
-#     ],
-#     key=['M', 'N', 'K'],
-# )
 @triton.jit
 def matmul_kernel_with_block_pointers(
         # Pointers to matrices
@@ -150,7 +136,23 @@ def _autotune(configs, function):
         print(f"i: {i+1}/{len(configs)} ", str(config), " :", str(t_config))
     return best, best_config
 
+
+# Built on an A100 80GB
 BEST_CONFIGS = {}
+
+BEST_CONFIGS[(torch.Size([98000, 768]), (768, 1), torch.Size([768, 2304]), (1, 768), torch.Size([98000, 2304]), (2304, 1), torch.Size([98000, 2304]), (1, 0), torch.Size([98000, 2304]), (0, 1))] = (64, 256, 64, 8, 4, 4)
+BEST_CONFIGS[(torch.Size([98000, 768]), (768, 1), torch.Size([768, 768]), (1, 768), torch.Size([98000, 768]), (768, 1), torch.Size([98000, 768]), (1, 0), torch.Size([98000, 768]), (0, 1))] = (128, 128, 64, 8, 5, 4)
+BEST_CONFIGS[(torch.Size([81920, 768]), (768, 1), torch.Size([768, 3072]), (1, 768), torch.Size([81920, 3072]), (3072, 1), torch.Size([81920, 3072]), (1, 0), torch.Size([81920, 3072]), (0, 1))] = (64, 256, 64, 8, 4, 4)
+BEST_CONFIGS[(torch.Size([81920, 3072]), (3072, 1), torch.Size([3072, 768]), (1, 3072), torch.Size([81920, 768]), (768, 1), torch.Size([81920, 768]), (1, 0), torch.Size([81920, 768]), (0, 1))] = (128, 128, 64, 8, 4, 4)
+BEST_CONFIGS[(torch.Size([81920, 768]), (768, 1), torch.Size([768, 2304]), (1, 768), torch.Size([81920, 2304]), (2304, 1), torch.Size([81920, 2304]), (1, 0), torch.Size([81920, 2304]), (0, 1))] = (128, 128, 64, 8, 5, 4)
+BEST_CONFIGS[(torch.Size([81920, 768]), (768, 1), torch.Size([768, 768]), (1, 768), torch.Size([81920, 768]), (768, 1), torch.Size([81920, 768]), (1, 0), torch.Size([81920, 768]), (0, 1))] = (64, 256, 64, 8, 4, 4)
+
+BEST_CONFIGS[(torch.Size([98000, 1280]), (1280, 1), torch.Size([1280, 3840]), (1, 1280), torch.Size([98000, 3840]), (3840, 1), torch.Size([98000, 3840]), (1, 0), torch.Size([98000, 3840]), (0, 1))] = (64, 256, 64, 8, 4, 4)
+BEST_CONFIGS[(torch.Size([98000, 1280]), (1280, 1), torch.Size([1280, 1280]), (1, 1280), torch.Size([98000, 1280]), (1280, 1), torch.Size([98000, 1280]), (1, 0), torch.Size([98000, 1280]), (0, 1))] = (128, 128, 64, 8, 4, 4)
+BEST_CONFIGS[(torch.Size([81920, 1280]), (1280, 1), torch.Size([1280, 5120]), (1, 1280), torch.Size([81920, 5120]), (5120, 1), torch.Size([81920, 5120]), (1, 0), torch.Size([81920, 5120]), (0, 1))] = (64, 256, 64, 8, 4, 4)
+BEST_CONFIGS[(torch.Size([81920, 5120]), (5120, 1), torch.Size([5120, 1280]), (1, 5120), torch.Size([81920, 1280]), (1280, 1), torch.Size([81920, 1280]), (1, 0), torch.Size([81920, 1280]), (0, 1))] = (128, 128, 64, 8, 4, 4)
+BEST_CONFIGS[(torch.Size([81920, 1280]), (1280, 1), torch.Size([1280, 3840]), (1, 1280), torch.Size([81920, 3840]), (3840, 1), torch.Size([81920, 3840]), (1, 0), torch.Size([81920, 3840]), (0, 1))] = (64, 256, 64, 8, 4, 4)
+BEST_CONFIGS[(torch.Size([81920, 1280]), (1280, 1), torch.Size([1280, 1280]), (1, 1280), torch.Size([81920, 1280]), (1280, 1), torch.Size([81920, 1280]), (1, 0), torch.Size([81920, 1280]), (0, 1))] = (128, 128, 64, 8, 4, 4)
 
 def _find_config(key_tensors, function):
     key = sum([[k.size(), k.stride()] for k in key_tensors], [])
