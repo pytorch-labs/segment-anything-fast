@@ -216,13 +216,8 @@ def _int_mm_dequant(a, b, scalar1, scalar2, out_dtype):
 
     best_config, first_time = _find_config([a, b, c, scalar1, scalar2], partial_matmul_kernel)
     partial_matmul_kernel(*best_config)
-    if first_time:
-        fp16_time = benchmark_torch_function_in_microseconds(torch.mm, a.half(), b.half(), out=c)
-        print(f"fp16_time {fp16_time}")
 
     return c
-    # c = c.mul(scalar1).mul(scalar2).to(out_dtype)
-    # return c
 
 def _int_mm_dequant_meta(a, b, scalar1, scalar2, out_dtype):
     M, K = a.shape
