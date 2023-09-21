@@ -207,7 +207,12 @@ def build_results(batched_data_iter,
         if num_datapoints == batch_size:
             num_images += num_datapoints
             num_batches += 1
-            elapsed_time += kernel_time
+            # We consistently exclude the last (512 - filtered) images
+            # Since batch sizes must be powers of two and less than
+            # or equal 512 this ensures consistent timing across varying
+            # batch sizes.
+            if num_images <= 4488:
+                elapsed_time += kernel_time
         else:
             partial_batch = True
         batch_idx += 1
