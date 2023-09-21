@@ -89,13 +89,13 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
             result_batch = [create_result_entry(d[0], g, m, s, d[3]) for (m, s, d, g) in zip(masks.unbind(),
                                                                                      scores.unbind(), datapoints,
                                                                                      nt_gt_masks.unbind())]
-    # After all kernels have been launched we synchronize again and measure
-    # the amount of time spent on the GPU. This is a fairly tight measurement
-    # around the launched GPU kernels and exlcudes data movement from host
-    # to device.
-    end_event.record()
-    torch.cuda.synchronize()
-    elapsed_time = start_event.elapsed_time(end_event)
+        # After all kernels have been launched we synchronize again and measure
+        # the amount of time spent on the GPU. This is a fairly tight measurement
+        # around the launched GPU kernels and excludes data movement from host
+        # to device.
+        end_event.record()
+        torch.cuda.synchronize()
+        elapsed_time = start_event.elapsed_time(end_event)
     return sum(result_batch, []), orig_input_image_batch_size, elapsed_time
 
 def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
@@ -154,13 +154,13 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
                 entry = create_result_entry(anns, gt_masks, masks, scores, idx)
                 result_batch += entry
 
-    # After all kernels have been launched we synchronize again and measure
-    # the amount of time spent on the GPU. This is a fairly tight measurement
-    # around the launched GPU kernels and exlcudes data movement from host
-    # to device.
-    end_event.record()
-    torch.cuda.synchronize()
-    elapsed_time = start_event.elapsed_time(end_event)
+        # After all kernels have been launched we synchronize again and measure
+        # the amount of time spent on the GPU. This is a fairly tight measurement
+        # around the launched GPU kernels and excludes data movement from host
+        # to device.
+        end_event.record()
+        torch.cuda.synchronize()
+        elapsed_time = start_event.elapsed_time(end_event)
     return result_batch, orig_input_image_batch_size, elapsed_time
 
 
