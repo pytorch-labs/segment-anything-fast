@@ -4,7 +4,8 @@ import matplotlib
 
 
 def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label):
-    ax.bar(df[category_column], df[value_column], label=label)
+    x_coords = [techniques[name] for name in df[category_column]]
+    ax.bar(x_coords, df[value_column], label=label)
 
     # Customize the chart labels and title
     ax.set_xlabel(category_column)
@@ -20,8 +21,8 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
         ax.axhline(y=tick, color='gray', linestyle='--', alpha=0.7)
 
     # Add data labels or data points above the bars
-    for name, value in zip(df[category_column], df[value_column]):
-        ax.text(techniques[name], value, data_format.format(value), ha='center', va='bottom')
+    for x, value in zip(x_coords, df[value_column]):
+        ax.text(x, value, data_format.format(value), ha='center', va='bottom')
 
 
 def make_row_chart(df, value_column, ax1, ax2, ax3, label, ylim_low=None, ylim_high=None, title="", relative=False, data_format=None):
