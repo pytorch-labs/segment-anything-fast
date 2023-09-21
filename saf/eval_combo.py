@@ -225,6 +225,7 @@ def profiler_runner(path, fn, *args, **kwargs):
     prof.export_chrome_trace(path)
     return result
 
+
 def profile_top_runner(fn, *args, **kwargs):
     with torch.profiler.profile(
             activities=[torch.profiler.ProfilerActivity.CPU,
@@ -232,6 +233,20 @@ def profile_top_runner(fn, *args, **kwargs):
             record_shapes=True) as prof:
         result = fn(*args, **kwargs)
     print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
+    return result
+
+
+def memory_runner(path, fn, *args, **kwargs):
+    print("Start memory recording")
+    torch.cuda.synchronize()
+    torch.cuda.memory._record_memory_history(True, trace_alloc_max_entries=100000, trace_alloc_record_context=True)
+    result = fn(*args, **kwargs)
+    torch.cuda.synchronize()
+    snapshot = torch.cuda.memory._snapshot()
+    print("Finish memory recording")
+    import pickle
+    with open(path, 'wb') as f:
+        pickle.dump(snapshot, f)
     return result
 
 
@@ -259,6 +274,7 @@ def run(
     pad_input_image_batch=True,
     profile_path=None,
     profile_top=False,
+    memory_path=None,
     use_local_sam_fork=False,
 ):
     from torch._inductor import config as tritonconfig
@@ -353,6 +369,10 @@ def run(
     if profile_top:
         runner = profile_top_runner
 
+    if memory_path is not None:
+        import functools
+        runner = functools.partial(memory_runner, memory_path)
+
     results, avg_ms_per_img, num_batches, num_images = runner(build_results,
                                                               batched_data_iter,
                                                               predictor,
@@ -384,9 +404,9 @@ def run(
 
     if print_header:
         print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s(avg)", "batch_ms(avg)/batch_size", "mIoU", "use_compile",
-              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers", "num_batches", "num_images", "profile_path"]))
+              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers", "num_batches", "num_images", "profile_path", "memory_path"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, batch_ms_batch_size, mIoU, use_compile,
-          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers, num_batches, num_images, profile_path])))
+          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers, num_batches, num_images, profile_path, memory_path])))
 
 
 if __name__ == '__main__':

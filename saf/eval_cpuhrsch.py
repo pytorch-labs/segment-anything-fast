@@ -66,7 +66,8 @@ def run_experiment(idx,
                    capture_output=True,
                    limit=None,
                    profile_path=None,
-                   profile_top=False):
+                   profile_top=False,
+                   memory_path=None):
     args = root_cmd
     args = args + ["--sam_model_type", model_type]
     args = args + ["--batch_size", str(batch_size)]
@@ -89,6 +90,8 @@ def run_experiment(idx,
         args = args + ["--profile-path", profile_path]
     if profile_top:
         args = args + ["--profile-top", "True"]
+    if memory_path is not None:
+        args = args + ["--memory-path", memory_path]
     if extra_args is None:
         extra_args = []
     args = args + extra_args
@@ -114,6 +117,9 @@ def run_experiment(idx,
 # TODO: Accuracy numbers for static quantization are not reliable and rely on using first 10 batches of data to build scales.
 # Need to use a held out set of data to build these scalars.
 
+run_experiment("int8",           "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=True, compress="dynamic_quant", capture_output=False,
+        memory_path="/home/cpuhrsch/tmp/int8.pickle", print_header=True, limit=100)
+import sys; sys.exit(0)
 run_experiment("float32",        "default",                     "vit_b", 20, 32, print_header=True, capture_output=False)
 run_experiment("int8",           "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant", capture_output=False)
 run_experiment("int8",           "local-fork",                  "vit_b", 50, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant", capture_output=False)
