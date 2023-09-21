@@ -69,26 +69,26 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
     end_event = torch.cuda.Event(enable_timing=True)
     start_event.record()
 
-    # input_image_batch = input_image_batch.to(device=device, non_blocking=True)
-    with torch.autograd.profiler.record_function("image encoder"):
-        features_batch = encoder(input_image_batch)
-        features_batch = features_batch[:orig_input_image_batch_size]
+    with torch.autograd.profiler.record_function("timed region"):
+        with torch.autograd.profiler.record_function("image encoder"):
+            features_batch = encoder(input_image_batch)
+            features_batch = features_batch[:orig_input_image_batch_size]
 
-    with torch.autograd.profiler.record_function("nt predict_torch"):
-        predictor.reset_image()
-        predictor.original_sizes = [d[1].shape[:2] for d in datapoints]
-        predictor.input_sizes = [d[2] for d in datapoints]
-        predictor.features_batch = features_batch
-        predictor.is_image_set = True
-        nt_coords = nt_coords.unsqueeze(2)
-        masks, scores, logits = predictor.predict_torch(
-            point_coords=nt_coords,
-            point_labels=nt_fg_labels,
-            multimask_output=True,
-        )
-        result_batch = [create_result_entry(d[0], g, m, s, d[3]) for (m, s, d, g) in zip(masks.unbind(),
-                                                                                 scores.unbind(), datapoints,
-                                                                                 nt_gt_masks.unbind())]
+        with torch.autograd.profiler.record_function("nt predict_torch"):
+            predictor.reset_image()
+            predictor.original_sizes = [d[1].shape[:2] for d in datapoints]
+            predictor.input_sizes = [d[2] for d in datapoints]
+            predictor.features_batch = features_batch
+            predictor.is_image_set = True
+            nt_coords = nt_coords.unsqueeze(2)
+            masks, scores, logits = predictor.predict_torch(
+                point_coords=nt_coords,
+                point_labels=nt_fg_labels,
+                multimask_output=True,
+            )
+            result_batch = [create_result_entry(d[0], g, m, s, d[3]) for (m, s, d, g) in zip(masks.unbind(),
+                                                                                     scores.unbind(), datapoints,
+                                                                                     nt_gt_masks.unbind())]
     # After all kernels have been launched we synchronize again and measure
     # the amount of time spent on the GPU. This is a fairly tight measurement
     # around the launched GPU kernels and exlcudes data movement from host
@@ -128,30 +128,31 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
     end_event = torch.cuda.Event(enable_timing=True)
     start_event.record()
 
-    with torch.autograd.profiler.record_function("image encoder"):
-        features_batch = encoder(input_image_batch)
-        features_batch = features_batch[:orig_input_image_batch_size]
+    with torch.autograd.profiler.record_function("timed region"):
+        with torch.autograd.profiler.record_function("image encoder"):
+            features_batch = encoder(input_image_batch)
+            features_batch = features_batch[:orig_input_image_batch_size]
 
-    with torch.autograd.profiler.record_function("predict_torch"):
-        result_batch = []
-        for batch_idx, (anns, image, input_size, idx, coords, gt_masks) in enumerate(datapoints):
-            features = features_batch.narrow(0, batch_idx, 1)
-            predictor.reset_image()
-            predictor.original_size = image.shape[:2]
-            predictor.input_size = input_size
-            predictor.features = features
-            predictor.is_image_set = True
-            coords = coords.unsqueeze(1)
-            fg_labels = torch.ones(
-                (coords.size(0), 1), dtype=torch.int, device=device)
-            # TODO: Break this up further to batch more computation.
-            masks, scores, logits = predictor.predict_torch(
-                point_coords=coords,
-                point_labels=fg_labels,
-                multimask_output=True,
-            )
-            entry = create_result_entry(anns, gt_masks, masks, scores, idx)
-            result_batch += entry
+        with torch.autograd.profiler.record_function("predict_torch"):
+            result_batch = []
+            for batch_idx, (anns, image, input_size, idx, coords, gt_masks) in enumerate(datapoints):
+                features = features_batch.narrow(0, batch_idx, 1)
+                predictor.reset_image()
+                predictor.original_size = image.shape[:2]
+                predictor.input_size = input_size
+                predictor.features = features
+                predictor.is_image_set = True
+                coords = coords.unsqueeze(1)
+                fg_labels = torch.ones(
+                    (coords.size(0), 1), dtype=torch.int, device=device)
+                # TODO: Break this up further to batch more computation.
+                masks, scores, logits = predictor.predict_torch(
+                    point_coords=coords,
+                    point_labels=fg_labels,
+                    multimask_output=True,
+                )
+                entry = create_result_entry(anns, gt_masks, masks, scores, idx)
+                result_batch += entry
 
     # After all kernels have been launched we synchronize again and measure
     # the amount of time spent on the GPU. This is a fairly tight measurement
@@ -247,6 +248,8 @@ def memory_runner(path, fn, *args, **kwargs):
     import pickle
     with open(path, 'wb') as f:
         pickle.dump(snapshot, f)
+    # Use to convert pickle file into html
+    # python torch/cuda/_memory_viz.py trace_plot <snapshot>.pickle -o <snapshot>.html
     return result
 
 
