@@ -66,7 +66,8 @@ def run_experiment(idx,
                    capture_output=True,
                    limit=None,
                    profile_path=None,
-                   profile_top=False):
+                   profile_top=False,
+                   memory_path=None):
     args = root_cmd
     args = args + ["--sam_model_type", model_type]
     args = args + ["--batch_size", str(batch_size)]
@@ -89,6 +90,8 @@ def run_experiment(idx,
         args = args + ["--profile-path", profile_path]
     if profile_top:
         args = args + ["--profile-top", "True"]
+    if memory_path is not None:
+        args = args + ["--memory-path", memory_path]
     if extra_args is None:
         extra_args = []
     args = args + extra_args
@@ -114,35 +117,63 @@ def run_experiment(idx,
 # TODO: Accuracy numbers for static quantization are not reliable and rely on using first 10 batches of data to build scales.
 # Need to use a held out set of data to build these scalars.
 
-run_experiment("float32",        "default",                     "vit_b", 20, 32, print_header=True)
-run_experiment("float16",        "codesign",                    "vit_b", 20, 32, use_half=True)
+def run_traces(*args, **kwargs):
+    traces_dir = "/home/cpuhrsch/tmp/traces/20230920"
+    kwargs['limit'] = 200
+    memory_path = f"{traces_dir}/{args[0]}"
+    kwargs['memory_path'] = memory_path + ".pickle"
+    run_experiment(*args, **kwargs)
+    kwargs['print_header'] = False
+    kwargs['memory_path'] = None
+    profile_path = f"{traces_dir}/{args[0]}.json.gz"
+    kwargs['profile_path'] = profile_path
+    run_experiment(*args, **kwargs)
+    conversion_cmd = [python_path, "/home/cpuhrsch/dev/pytorch/torch/cuda/_memory_viz.py", "trace_plot", memory_path + ".pickle", "-o", memory_path + ".html"]
+    result = subprocess.run(conversion_cmd, capture_output=True)
+    assert result.returncode == 0
+
+# run_traces("fp32",           "default",                     "vit_b", 20, 32, print_header=True)
+# run_traces("fp16",           "codesign",                    "vit_b", 20, 32, use_half=True)
+# run_traces("compile",        "codesign",                    "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
+# run_traces("SDPA",           "sdpa-decoder",                "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
+# run_traces("Triton",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
+# run_traces("NT",             "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
+# run_traces("int8",           "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+# run_traces("static",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
+# run_traces("sparse",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
+
+run_experiment("fp32",           "default",                     "vit_b", 20, 32, print_header=True)
+run_experiment("fp16",           "codesign",                    "vit_b", 20, 32, use_half=True)
 run_experiment("compile",        "codesign",                    "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
 run_experiment("SDPA",           "sdpa-decoder",                "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("Triton",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("NT",             "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
-run_experiment("int8",           "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
-run_experiment("static",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
-run_experiment("sparse",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
+for bs in [20, 50, 100, 200]:
+    run_experiment("Triton",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune")
+    run_experiment("NT",         "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
+    run_experiment("int8",       "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+    run_experiment("static",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
+    run_experiment("sparse",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
-run_experiment("float32",        "default",                     "vit_l", 20, 32)
-run_experiment("float16",        "codesign",                    "vit_l", 20, 32, use_half=True)
+run_experiment("fp32",           "default",                     "vit_l", 20, 32)
+run_experiment("fp16",           "codesign",                    "vit_l", 20, 32, use_half=True)
 run_experiment("compile",        "codesign",                    "vit_l", 20, 32, use_half=True,  use_compile="max-autotune")
 run_experiment("SDPA",           "sdpa-decoder",                "vit_l", 20, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("Triton",         "local-fork",                  "vit_l", 20, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("NT",             "local-fork",                  "vit_l", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
-run_experiment("int8",           "local-fork",                  "vit_l", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
-run_experiment("static",         "local-fork",                  "vit_l", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
-run_experiment("sparse",         "local-fork",                  "vit_l", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
+for bs in [20, 50, 100, 200]:
+    run_experiment("Triton",     "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune")
+    run_experiment("NT",         "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
+    run_experiment("int8",       "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+    run_experiment("static",     "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
+    run_experiment("sparse",     "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
-run_experiment("float32",        "default",                     "vit_h", 20, 32)
-run_experiment("float16",        "codesign",                    "vit_h", 20, 32, use_half=True)
+run_experiment("fp32",           "default",                     "vit_h", 20, 32)
+run_experiment("fp16",           "codesign",                    "vit_h", 20, 32, use_half=True)
 run_experiment("compile",        "codesign",                    "vit_h", 20, 32, use_half=True,  use_compile="max-autotune")
 run_experiment("SDPA",           "sdpa-decoder",                "vit_h", 20, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("Triton",         "local-fork",                  "vit_h", 20, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("NT",             "local-fork",                  "vit_h", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
-run_experiment("int8",           "local-fork",                  "vit_h", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
-run_experiment("static",         "local-fork",                  "vit_h", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
-run_experiment("sparse",         "local-fork",                  "vit_h", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
+for bs in [20, 50, 100, 200]:
+    run_experiment("Triton",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune")
+    run_experiment("NT",         "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
+    run_experiment("int8",       "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+    run_experiment("static",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
+    run_experiment("sparse",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
 # -- Old experiments 20230915
 # run_experiment("010",  "default",                 "vit_b",  1,  0, print_header=True)

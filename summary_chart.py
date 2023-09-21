@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 import matplotlib
 
 
-def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format):
-    ax.bar(df[category_column], df[value_column])
+def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label):
+    x_coords = [techniques[name] for name in df[category_column]]
+    ax.bar(df[category_column], df[value_column], label=label)
 
     # Customize the chart labels and title
     ax.set_xlabel(category_column)
@@ -20,11 +21,11 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
         ax.axhline(y=tick, color='gray', linestyle='--', alpha=0.7)
 
     # Add data labels or data points above the bars
-    for i, value in enumerate(df[value_column]):
-        ax.text(i, value, data_format.format(value), ha='center', va='bottom')
+    for x, value in zip(x_coords, df[value_column]):
+        ax.text(x, value, data_format.format(value), ha='center', va='bottom')
 
 
-def make_row_chart(df, value_column, ax1, ax2, ax3, ylim_low=None, ylim_high=None, title="", relative=False, data_format=None):
+def make_row_chart(df, value_column, ax1, ax2, ax3, label, ylim_low=None, ylim_high=None, title="", relative=False, data_format=None):
     category_column = "technique"
 
     def helper(sam_model_type, ax1):
@@ -37,7 +38,7 @@ def make_row_chart(df, value_column, ax1, ax2, ax3, ylim_low=None, ylim_high=Non
                 vit_b_df[value_column].iloc[0])
 
         make_sub_chart(vit_b_df, ax1, f"{title} for {sam_model_type}",
-                       category_column, value_column, ylim_low, ylim_high, data_format)
+                       category_column, value_column, ylim_low, ylim_high, data_format, label)
     helper("vit_b", ax1)
     helper("vit_l", ax2)
     helper("vit_h", ax3)
@@ -45,19 +46,30 @@ def make_row_chart(df, value_column, ax1, ax2, ax3, ylim_low=None, ylim_high=Non
 matplotlib.rcParams.update({'font.size': 12})
 
 csv_file = "results.csv"
-df = pd.read_csv(csv_file)
+mdf = pd.read_csv(csv_file)
+techniques = {}
+for i, name in enumerate(list(mdf["technique"])[:9]):
+    techniques[name] = i
+print("techniques: ", techniques)
 
-print(df)
-print(df.columns)
+fig, axs = plt.subplots(3, 3, figsize=(20, 20))
 
-fig, ((ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9)
-      ) = plt.subplots(3, 3, figsize=(20, 20))
-make_row_chart(df, "img_s(avg)", ax1, ax2, ax3, 0.0, 100.0,
-               "Images per second", data_format="{:.2f}")
-make_row_chart(df, "memory(MiB)", ax4, ax5, ax6, 0, 80000,
-               title="Memory savings", data_format="{:.0f}")
-make_row_chart(df, "mIoU", ax7, ax8, ax9, 0.0, 1.0,
-               title="Accuracy", data_format="{:.2f}")
+for batch_size in [20]:
+    df = mdf[mdf["batch_size"] == batch_size]
+    
+    # print(df)
+    # print(df.columns)
+    
+    make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", 0.0, 100.0,
+                   "Images per second", data_format="{:.2f}")
+    make_row_chart(df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000,
+                   title="Memory savings", data_format="{:.0f}")
+    make_row_chart(df, "mIoU", *axs[2], f"Batch size {batch_size}", 0.0, 1.0,
+                   title="Accuracy", data_format="{:.2f}")
+for ax in axs:
+    ax[0].legend()
+    ax[1].legend()
+    ax[2].legend()
 # plt.tick_params(axis='both', which='both', length=10)
 plt.tight_layout()
 
