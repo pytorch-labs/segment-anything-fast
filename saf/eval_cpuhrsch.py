@@ -152,6 +152,7 @@ for bs in [16, 32, 64, 128, 256]:
     run_experiment("Triton",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune")
     run_experiment("NT",         "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
     run_experiment("int8",       "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+    run_experiment("static",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=True, compress="static_quant")
     run_experiment("static",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
     run_experiment("sparse",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
@@ -162,6 +163,7 @@ for bs in [16, 32, 64, 128, 256]:
     run_experiment("Triton",     "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune")
     run_experiment("NT",         "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
     run_experiment("int8",       "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+    run_experiment("static",     "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=True, compress="static_quant")
     run_experiment("static",     "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
     run_experiment("sparse",     "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
@@ -172,6 +174,7 @@ for bs in [16, 32, 64, 128, 256]:
     run_experiment("Triton",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune")
     run_experiment("NT",         "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
     run_experiment("int8",       "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+    run_experiment("static",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=True, compress="static_quant")
     run_experiment("static",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
     run_experiment("sparse",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
