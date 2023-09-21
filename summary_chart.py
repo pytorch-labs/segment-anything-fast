@@ -5,7 +5,7 @@ import matplotlib
 
 def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label):
     x_coords = [techniques[name] for name in df[category_column]]
-    ax.bar(x_coords, df[value_column], label=label)
+    ax.bar(df[category_column], df[value_column], label=label)
 
     # Customize the chart labels and title
     ax.set_xlabel(category_column)
