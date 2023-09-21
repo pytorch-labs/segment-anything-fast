@@ -66,6 +66,7 @@ for batch_size in [20, 50, 100, 200]:
                    title="Memory savings", data_format="{:.0f}")
     make_row_chart(df, "mIoU", ax7, ax8, ax9, f"Batch size {batch_size}", 0.0, 1.0,
                    title="Accuracy", data_format="{:.2f}")
+ax1.legend()
 # plt.tick_params(axis='both', which='both', length=10)
 plt.tight_layout()
 
