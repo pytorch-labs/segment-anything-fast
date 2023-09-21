@@ -51,8 +51,7 @@ for i, name in enumerate(list(mdf["technique"])[:9]):
     techniques[name] = i
 print("techniques: ", techniques)
 
-fig, ((ax1, ax2, ax3), (ax4, ax5, ax6), (ax7, ax8, ax9)
-      ) = plt.subplots(3, 3, figsize=(20, 20))
+fig, axs = plt.subplots(3, 3, figsize=(20, 20))
 
 for batch_size in [20, 50, 100, 200]:
     df = mdf[mdf["batch_size"] == batch_size]
@@ -60,13 +59,16 @@ for batch_size in [20, 50, 100, 200]:
     # print(df)
     # print(df.columns)
     
-    make_row_chart(df, "img_s(avg)", ax1, ax2, ax3, f"Batch size {batch_size}", 0.0, 100.0,
+    make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", 0.0, 100.0,
                    "Images per second", data_format="{:.2f}")
-    make_row_chart(df, "memory(MiB)", ax4, ax5, ax6, f"Batch size {batch_size}", 0, 80000,
+    make_row_chart(df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000,
                    title="Memory savings", data_format="{:.0f}")
-    make_row_chart(df, "mIoU", ax7, ax8, ax9, f"Batch size {batch_size}", 0.0, 1.0,
+    make_row_chart(df, "mIoU", *axs[2], f"Batch size {batch_size}", 0.0, 1.0,
                    title="Accuracy", data_format="{:.2f}")
-ax1.legend()
+for ax in axs:
+    ax[0].legend()
+    ax[1].legend()
+    ax[2].legend()
 # plt.tick_params(axis='both', which='both', length=10)
 plt.tight_layout()
 
