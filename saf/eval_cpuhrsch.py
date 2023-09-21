@@ -142,16 +142,17 @@ def run_traces(*args, **kwargs):
 # run_traces("static",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
 # run_traces("sparse",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
-run_experiment("fp32",           "default",                     "vit_b", 20, 32, print_header=True)
-run_experiment("fp16",           "codesign",                    "vit_b", 20, 32, use_half=True)
-run_experiment("compile",        "codesign",                    "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-run_experiment("SDPA",           "sdpa-decoder",                "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-for bs in [20, 50, 100, 200]:
+run_experiment("fp32",           "default",                     "vit_b", 16, 32, print_header=True)
+for bs in [16, 32, 64, 128, 256]:
+    run_experiment("fp16",       "codesign",                    "vit_b", bs, 32, use_half=True)
+    run_experiment("compile",    "codesign",                    "vit_b", bs, 32, use_half=True,  use_compile="max-autotune")
+    run_experiment("SDPA",       "sdpa-decoder",                "vit_b", bs, 32, use_half=True,  use_compile="max-autotune")
     run_experiment("Triton",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune")
     run_experiment("NT",         "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
     run_experiment("int8",       "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
     run_experiment("static",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
     run_experiment("sparse",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
+import sys; sys.exit(0)
 
 run_experiment("fp32",           "default",                     "vit_l", 20, 32)
 run_experiment("fp16",           "codesign",                    "vit_l", 20, 32, use_half=True)
