@@ -47,6 +47,8 @@ matplotlib.rcParams.update({'font.size': 12})
 csv_file = "results.csv"
 df = pd.read_csv(csv_file)
 
+df = df[df["batch_size"] == 20]
+
 print(df)
 print(df.columns)
 
