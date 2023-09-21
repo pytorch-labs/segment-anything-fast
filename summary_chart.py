@@ -60,7 +60,7 @@ for batch_size in [200, 100, 50, 20]:
     # print(df)
     print(df.columns)
     
-    make_row_chart(df, "batch_ms(avg)/batch_size", *axs[0], f"Batch size {batch_size}", 0.0, 100.0,
+    make_row_chart(df, "batch_ms(avg)/batch_size", *axs[0], f"Batch size {batch_size}", 0.0, 500.0,
                    "Images per second", data_format="{:.2f}")
     make_row_chart(df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000,
                    title="Memory savings", data_format="{:.0f}")
