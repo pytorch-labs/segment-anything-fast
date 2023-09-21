@@ -123,6 +123,7 @@ def run_traces(*args, **kwargs):
     memory_path = f"{traces_dir}/{args[0]}"
     kwargs['memory_path'] = memory_path + ".pickle"
     run_experiment(*args, **kwargs)
+    kwargs['print_header'] = False
     kwargs['memory_path'] = None
     profile_path = f"{traces_dir}/{args[0]}.json.gz"
     kwargs['profile_path'] = profile_path
@@ -131,17 +132,15 @@ def run_traces(*args, **kwargs):
     result = subprocess.run(conversion_cmd, capture_output=True)
     assert result.returncode == 0
 
-run_traces("fp32",           "default",                     "vit_b", 20, 32, print_header=True)
-run_traces("fp16",           "codesign",                    "vit_b", 20, 32, use_half=True)
-run_traces("compile",        "codesign",                    "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-run_traces("SDPA",           "sdpa-decoder",                "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-run_traces("Triton",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-run_traces("NT",             "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
-run_traces("int8",           "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
-run_traces("static",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
-run_traces("sparse",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
-import sys; sys.exit(0)
-
+# run_traces("fp32",           "default",                     "vit_b", 20, 32, print_header=True)
+# run_traces("fp16",           "codesign",                    "vit_b", 20, 32, use_half=True)
+# run_traces("compile",        "codesign",                    "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
+# run_traces("SDPA",           "sdpa-decoder",                "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
+# run_traces("Triton",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
+# run_traces("NT",             "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
+# run_traces("int8",           "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+# run_traces("static",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
+# run_traces("sparse",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
 run_experiment("fp32",           "default",                     "vit_b", 20, 32, print_header=True)
 run_experiment("fp16",           "codesign",                    "vit_b", 20, 32, use_half=True)
