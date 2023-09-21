@@ -143,7 +143,7 @@ def run_traces(*args, **kwargs):
 # run_traces("sparse",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
 print_header = True
-for bs in [16, 32, 64, 128, 256]:
+for bs in [1, 2, 4, 8, 16, 32, 64, 128, 256]:
     run_experiment("fp32",       "default",                     "vit_b", bs, 32, print_header=print_header)
     print_header = False
     run_experiment("fp16",       "codesign",                    "vit_b", bs, 32, use_half=True)
