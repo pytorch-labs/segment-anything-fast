@@ -46,7 +46,8 @@ def make_row_chart(df, value_column, ax1, ax2, ax3, label, ylim_low=None, ylim_h
 matplotlib.rcParams.update({'font.size': 12})
 
 csv_file = "results.csv"
-mdf = pd.read_csv(csv_file)
+mdf_ = pd.read_csv(csv_file)
+mdf = mdf_.dropna(subset=["batch_size"])
 techniques = {}
 for i, name in enumerate(list(mdf["technique"])[:9]):
     techniques[name] = i
