@@ -187,7 +187,10 @@ for bs in [1, 8, 16, 32, 64, 128, 256]:
     run_experiment("sparse",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
 # -- Static quant
+<<<<<<< HEAD
 # run_traces("static",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
+=======
+>>>>>>> main
 # for bs in [1, 8, 16, 32, 64, 128, 256]:
 #     run_experiment("static",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=True, compress="static_quant")
 #     run_experiment("static",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
