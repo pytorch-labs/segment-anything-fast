@@ -118,29 +118,43 @@ def run_experiment(idx,
 # Need to use a held out set of data to build these scalars.
 
 def run_traces(*args, **kwargs):
-    traces_dir = "/home/cpuhrsch/tmp/traces/20230920"
-    kwargs['limit'] = 200
-    memory_path = f"{traces_dir}/{args[0]}"
-    kwargs['memory_path'] = memory_path + ".pickle"
-    run_experiment(*args, **kwargs)
-    kwargs['print_header'] = False
-    kwargs['memory_path'] = None
+    # Limit to 10 batches
+    kwargs['limit'] = 160
+    # Folder to save results to
+    traces_dir = "/home/cpuhrsch/tmp/traces/20230924"
+
+    # Create kernel traces
     profile_path = f"{traces_dir}/{args[0]}.json.gz"
     kwargs['profile_path'] = profile_path
     run_experiment(*args, **kwargs)
+    kwargs['profile_path'] = None
+
+    # Don't print header again if already printed
+    kwargs['print_header'] = False
+
+    # Create memory trace
+    if 'use_compile' in kwargs and kwargs['use_compile'] == "max-autotune":
+        # Memory traces don't seem to support CUDA graphs
+        kwargs['use_compile'] = "max-autotune-no-cudagraphs"
+
+    memory_path = f"{traces_dir}/{args[0]}"
+    kwargs['memory_path'] = memory_path + ".pickle"
+    run_experiment(*args, **kwargs)
+    kwargs['memory_path'] = None
+
+    # Convert memory trace to html page
     conversion_cmd = [python_path, "/home/cpuhrsch/dev/pytorch/torch/cuda/_memory_viz.py", "trace_plot", memory_path + ".pickle", "-o", memory_path + ".html"]
     result = subprocess.run(conversion_cmd, capture_output=True)
     assert result.returncode == 0
 
-# run_traces("fp32",           "default",                     "vit_b", 20, 32, print_header=True)
-# run_traces("fp16",           "codesign",                    "vit_b", 20, 32, use_half=True)
-# run_traces("compile",        "codesign",                    "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-# run_traces("SDPA",           "sdpa-decoder",                "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-# run_traces("Triton",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune")
-# run_traces("NT",             "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
-# run_traces("int8",           "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
-# run_traces("static",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
-# run_traces("sparse",         "local-fork",                  "vit_b", 20, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
+# run_traces("fp32",           "default",                     "vit_b", 16, 32, print_header=True)
+# run_traces("fp16",           "codesign",                    "vit_b", 16, 32, use_half=True)
+# run_traces("compile",        "codesign",                    "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
+# run_traces("SDPA",           "sdpa-decoder",                "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
+# run_traces("Triton",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
+# run_traces("NT",             "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
+# run_traces("int8",           "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+# run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
 print_header = True
 for bs in [1, 8, 16, 32, 64, 128, 256]:
@@ -173,6 +187,7 @@ for bs in [1, 8, 16, 32, 64, 128, 256]:
     run_experiment("sparse",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
 # -- Static quant
+# run_traces("static",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
 # for bs in [1, 8, 16, 32, 64, 128, 256]:
 #     run_experiment("static",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=True, compress="static_quant")
 #     run_experiment("static",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
