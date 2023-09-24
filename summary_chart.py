@@ -16,7 +16,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
             x_values.append(key)
             y_values.append(0)
     x_coords = [techniques[name] for name in df[category_column]]
-    ax.bar(df[category_column], df[value_column], label=label)
+    ax.bar(x_values, y_values, label=label)
 
     # Customize the chart labels and title
     ax.set_xlabel(category_column)
