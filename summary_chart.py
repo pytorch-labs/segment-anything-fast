@@ -2,21 +2,24 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 
+COLORS = list(matplotlib.colors.TABLEAU_COLORS.values())
 
 def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label):
     x_values = []
     y_values = []
+    bar_colors = []
     x_idx = 0
     for key in techniques.keys():
         if key in df[category_column].tolist():
             x_values.append(key)
             y_values.append(df[value_column].tolist()[x_idx])
+            bar_colors.append(COLORS[x_idx])
             x_idx += 1
         else:
             x_values.append(key)
             y_values.append(0)
     x_coords = [techniques[name] for name in df[category_column]]
-    ax.bar(x_values, y_values, label=label)
+    ax.bar(x_values, y_values, label=label, color=bar_colors)
 
     # Customize the chart labels and title
     ax.set_xlabel(category_column)
