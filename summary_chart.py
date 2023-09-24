@@ -2,10 +2,24 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 
+COLORS = list(matplotlib.colors.TABLEAU_COLORS.values())
 
 def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label):
+    x_values = []
+    y_values = []
+    bar_colors = []
+    x_idx = 0
+    for key in techniques.keys():
+        if key in df[category_column].tolist():
+            x_values.append(key)
+            y_values.append(df[value_column].tolist()[x_idx])
+            bar_colors.append(COLORS[batch_size_idx])
+            x_idx += 1
+        else:
+            x_values.append(key)
+            y_values.append(0)
     x_coords = [techniques[name] for name in df[category_column]]
-    ax.bar(df[category_column], df[value_column], label=label)
+    ax.bar(x_values, y_values, label=label, color=bar_colors)
 
     # Customize the chart labels and title
     ax.set_xlabel(category_column)
@@ -46,26 +60,34 @@ def make_row_chart(df, value_column, ax1, ax2, ax3, label, ylim_low=None, ylim_h
 matplotlib.rcParams.update({'font.size': 12})
 
 csv_file = "results.csv"
-mdf = pd.read_csv(csv_file)
+mdf_ = pd.read_csv(csv_file)
+mdf = mdf_.dropna(subset=["batch_size"])
 techniques = {}
-for i, name in enumerate(list(mdf["technique"])[:9]):
-    techniques[name] = i
+tech_idx = 0
+for _, name in enumerate(list(mdf["technique"])):
+    if name in techniques:
+        pass
+    else:
+        techniques[name] = tech_idx
+        tech_idx += 1
 print("techniques: ", techniques)
 
 fig, axs = plt.subplots(3, 3, figsize=(20, 20))
 
-for batch_size in [20]:
+for batch_size_idx, batch_size in enumerate([128, 64, 32, 16, 8, 1]):
     df = mdf[mdf["batch_size"] == batch_size]
     
     # print(df)
     # print(df.columns)
     
-    make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", 0.0, 100.0,
-                   "Images per second", data_format="{:.2f}")
+    if batch_size in [1, 64]:
+        make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", 0.0, 100.0,
+                       "Images per second", data_format="{:.2f}")
     make_row_chart(df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000,
                    title="Memory savings", data_format="{:.0f}")
-    make_row_chart(df, "mIoU", *axs[2], f"Batch size {batch_size}", 0.0, 1.0,
-                   title="Accuracy", data_format="{:.2f}")
+    if batch_size in [16]:
+        make_row_chart(df, "mIoU", *axs[2], f"Batch size {batch_size}", 0.0, 1.0,
+                       title="Accuracy", data_format="{:.2f}")
 for ax in axs:
     ax[0].legend()
     ax[1].legend()

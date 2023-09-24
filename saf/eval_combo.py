@@ -3,6 +3,7 @@ import torch
 import fire
 from metrics import calculate_miou, create_result_entry
 from data import build_data, setup_coco_img_ids
+import math
 
 torch._dynamo.config.cache_size_limit = 50000
 
@@ -143,9 +144,10 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
                 predictor.features = features
                 predictor.is_image_set = True
                 coords = coords.unsqueeze(1)
+                # TODO: Should exclude this from the timed region as well?
+                # Might explain a dip in larger batch sizes for vit_b without NT
                 fg_labels = torch.ones(
                     (coords.size(0), 1), dtype=torch.int, device=device)
-                # TODO: Break this up further to batch more computation.
                 masks, scores, logits = predictor.predict_torch(
                     point_coords=coords,
                     point_labels=fg_labels,
@@ -187,6 +189,7 @@ def build_results(batched_data_iter,
     num_images = 0
     num_batches = 0
     elapsed_time = 0
+    partial_batch = False
     for batch in tqdm.tqdm(batched_data_iter):
         with torch.no_grad():
             if batch_idx == 0:
@@ -199,10 +202,20 @@ def build_results(batched_data_iter,
             result_batch, num_datapoints, kernel_time = batch_runner(predictor, batch, batch_size, pad_input_image_batch)
             if result_batch is not None:
                 results += result_batch
-        if num_datapoints is not None:
+        # We expect a partial batch to only happens once at the end
+        assert not partial_batch
+        # Only measure timing on full batches
+        if num_datapoints == batch_size:
             num_images += num_datapoints
             num_batches += 1
-            elapsed_time += kernel_time
+            # We consistently exclude the last (512 - filtered) images
+            # Since batch sizes must be powers of two and less than
+            # or equal 512 this ensures consistent timing across varying
+            # batch sizes.
+            if num_images <= 4488:
+                elapsed_time += kernel_time
+        else:
+            partial_batch = True
         batch_idx += 1
 
     avg_ms_per_img = None
@@ -284,6 +297,10 @@ def run(
     tritonconfig.triton.unique_kernel_names = True
     tritonconfig.epilogue_fusion_first = epilogue_fusion_first
 
+    # Batch size needs to be a multiple of two and at most 512.
+    assert math.log2(batch_size).is_integer()
+    assert batch_size <= 512
+
     # https://github.com/facebookresearch/segment-anything/tree/main#model-checkpoints
     # largest to smallest: vit_h, vit_l, vit_b
     model_type_to_checkpoint = {
@@ -325,7 +342,7 @@ def run(
         weights_path = Path(f"{sam_model_type}_{batch_size}_static_quant_weights.ptk")
         if weights_path.exists() and weights_path.is_file():
             print("Loading static quantization weights")
-            weights = torch.load(f"{sam_model_type}_{batch_size}_static_quant_weights.ptk")
+            weights = torch.load(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
             from static_quant import set_x_absmax
             set_x_absmax(predictor.model.image_encoder, weights)
     elif compress == "sparse":
@@ -342,8 +359,16 @@ def run(
         assert compress is None, f"Unsupported compress mode {compress}"
 
 
-    coco_img_ids, cat_id_to_cat, catIds, coco = setup_coco_img_ids(
+    coco_img_ids_, cat_id_to_cat, catIds, coco = setup_coco_img_ids(
         coco_root_dir, coco_slice_name, coco_category_names, img_id)
+
+    coco_img_ids = []
+    for imgId in coco_img_ids_:
+        img = coco.loadImgs(imgId)[0]
+        annIds = coco.getAnnIds(imgIds=img['id'], catIds=catIds, iscrowd=None)
+        anns = coco.loadAnns(annIds)
+        if len(anns) != 0:
+            coco_img_ids.append(imgId)
 
     build_batch = build_data(coco_img_ids,
                              coco,
@@ -390,7 +415,7 @@ def run(
         from static_quant import get_x_absmax
         weights = get_x_absmax(predictor.model.image_encoder)
         print("Saving static quantization weights")
-        torch.save(weights, f"{sam_model_type}_{batch_size}_static_quant_weights.ptk")
+        torch.save(weights, f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
 
     results = [[r[0], r[1], r[2], r[3].item()] for r in results]
 
