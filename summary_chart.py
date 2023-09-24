@@ -49,13 +49,18 @@ csv_file = "results.csv"
 mdf_ = pd.read_csv(csv_file)
 mdf = mdf_.dropna(subset=["batch_size"])
 techniques = {}
-for i, name in enumerate(list(mdf["technique"])[:9]):
-    techniques[name] = i
+tech_idx = 0
+for _, name in enumerate(list(mdf["technique"])):
+    if name in techniques:
+        pass
+    else:
+        techniques[name] = tech_idx
+        tech_idx += 1
 print("techniques: ", techniques)
 
 fig, axs = plt.subplots(3, 3, figsize=(20, 20))
 
-for batch_size in [20]:
+for batch_size in [1, 8, 16, 32, 64, 128]:
     df = mdf[mdf["batch_size"] == batch_size]
     
     # print(df)
