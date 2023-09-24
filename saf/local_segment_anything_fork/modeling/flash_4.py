@@ -358,21 +358,6 @@ def _autotune(configs, function):
         print(str(config), " :", str(t_config))
     return best, best_config
 
-BEST_CONFIGS = {}
-BEST_CONFIGS[(torch.Size([60, 12, 4096, 64]), torch.Size([60, 12, 4096, 64]), torch.Size([60, 12, 4096, 64]), torch.Size([60, 12, 4096, 128]), torch.Size([60, 12, 4096, 64]), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (6291456, 524288, 128, 1), (3145728, 262144, 64, 1))] = (64, 64, 4, 2)
-BEST_CONFIGS[(torch.Size([20, 12, 4096, 64]), torch.Size([20, 12, 4096, 64]), torch.Size([20, 12, 4096, 64]), torch.Size([20, 12, 4096, 128]), torch.Size([20, 12, 4096, 64]), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (6291456, 524288, 128, 1), (3145728, 262144, 64, 1))] = (64, 64, 4, 2)
-BEST_CONFIGS[(torch.Size([ 1, 12, 4096, 64]), torch.Size([ 1, 12, 4096, 64]), torch.Size([ 1, 12, 4096, 64]), torch.Size([ 1, 12, 4096, 128]), torch.Size([ 1, 12, 4096, 64]), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (6291456, 524288, 128, 1), (3145728, 262144, 64, 1))] = (64, 128, 4, 2)
-
-BEST_CONFIGS[(torch.Size([1, 16, 4096, 128]), torch.Size([1, 16, 4096, 128]), torch.Size([1, 16, 4096, 128]), torch.Size([1, 16, 4096, 128]), torch.Size([1, 16, 4096, 128]), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1))] = (128, 64, 8, 3)
-BEST_CONFIGS[(torch.Size([100, 16, 4096, 128]), torch.Size([100, 16, 4096, 128]), torch.Size([100, 16, 4096, 128]), torch.Size([100, 16, 4096, 128]), torch.Size([100, 16, 4096, 128]), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1))] = (128, 64, 8, 3)
-BEST_CONFIGS[(torch.Size([50, 16, 4096, 128]), torch.Size([50, 16, 4096, 128]), torch.Size([50, 16, 4096, 128]), torch.Size([50, 16, 4096, 128]), torch.Size([50, 16, 4096, 128]), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1))] = (128, 64, 8, 3)
-BEST_CONFIGS[(torch.Size([40, 16, 4096, 128]), torch.Size([40, 16, 4096, 128]), torch.Size([40, 16, 4096, 128]), torch.Size([40, 16, 4096, 128]), torch.Size([40, 16, 4096, 128]), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1))] = (128, 64, 8, 3)
-BEST_CONFIGS[(torch.Size([20, 16, 4096, 128]), torch.Size([20, 16, 4096, 128]), torch.Size([20, 16, 4096, 128]), torch.Size([20, 16, 4096, 128]), torch.Size([20, 16, 4096, 128]), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1), (8388608, 524288, 128, 1))] = (128, 64, 8, 3)
-
-BEST_CONFIGS[(torch.Size([50, 12, 4096, 64]), torch.Size([50, 12, 4096, 64]), torch.Size([50, 12, 4096, 64]), torch.Size([50, 12, 4096, 128]), torch.Size([50, 12, 4096, 64]), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (6291456, 524288, 128, 1), (3145728, 262144, 64, 1))] = (64, 64, 4, 2)
-BEST_CONFIGS[(torch.Size([100, 12, 4096, 64]), torch.Size([100, 12, 4096, 64]), torch.Size([100, 12, 4096, 64]), torch.Size([100, 12, 4096, 128]), torch.Size([100, 12, 4096, 64]), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (6291456, 524288, 128, 1), (3145728, 262144, 64, 1))] = (64, 64, 4, 2)
-
-BEST_CONFIGS[(torch.Size([128, 12, 4096, 64]), torch.Size([128, 12, 4096, 64]), torch.Size([128, 12, 4096, 64]), torch.Size([128, 12, 4096, 128]), torch.Size([128, 12, 4096, 64]), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (3145728, 262144, 64, 1), (6291456, 524288, 128, 1), (3145728, 262144, 64, 1))] = (64, 64, 4, 2)
 
 def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
                                                  BLOCK_M,
@@ -423,6 +408,30 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
         num_warps=num_warps,
         num_stages=num_stages)
 
+def _load_best_configs():
+    from pathlib import Path
+    saved_configs = Path("flash_4_configs_a100.p")
+    if saved_configs.is_file():
+        import pickle
+        with open(saved_configs, 'rb') as f:
+            print(f"Loading best configs from file {saved_configs}")
+            return pickle.load(f)
+
+def _save_best_configs(best_configs):
+    from pathlib import Path
+    saved_configs = Path("flash_4_configs_a100.p")
+    with open(saved_configs, 'wb') as f:
+        import pickle
+        print(f"Saving best configs to file {saved_configs}")
+        pickle.dump(best_configs, f)
+
+def _create_best_configs_key(q, k, v, rel_h_w, o):
+    key = (q.size(),   k.size(),   v.size(),   rel_h_w.size(),   o.size(),
+           q.stride(), k.stride(), v.stride(), rel_h_w.stride(), o.stride())
+    return key
+
+BEST_CONFIGS = None
+
 def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
     q = q.contiguous()
     k = k.contiguous()
@@ -433,8 +442,10 @@ def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
     assert Lk in {16, 32, 64, 128}
     o = torch.empty_like(q, memory_format=torch.contiguous_format)
 
-    key = (q.size(),   k.size(),   v.size(),   rel_h_w.size(),   o.size(),
-           q.stride(), k.stride(), v.stride(), rel_h_w.stride(), o.stride())
+    global BEST_CONFIGS
+    if BEST_CONFIGS is None:
+        BEST_CONFIGS = _load_best_configs()
+    key = _create_best_configs_key(q, k, v, rel_h_w, o)
     if key not in BEST_CONFIGS:
         print("key ", key, " not found. Running autotune")
         import functools
@@ -449,6 +460,7 @@ def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
         BEST_CONFIGS[key] = best_config
         print("Found best_config ", best_config,
               " with time ", best, " for key ", key)
+        _save_best_configs(BEST_CONFIGS)
     best_config = BEST_CONFIGS[key]
     if best_config is None:
         return torch.tensor([])
