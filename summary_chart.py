@@ -4,6 +4,17 @@ import matplotlib
 
 
 def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label):
+    x_values = []
+    y_values = []
+    x_idx = 0
+    for key in techniques.keys():
+        if key in df[category_column].tolist():
+            x_values.append(key)
+            y_values.append(df[value_column].tolist()[x_idx])
+            x_idx += 1
+        else:
+            x_values.append(key)
+            y_values.append(0)
     x_coords = [techniques[name] for name in df[category_column]]
     ax.bar(df[category_column], df[value_column], label=label)
 
