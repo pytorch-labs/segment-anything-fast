@@ -80,7 +80,7 @@ for batch_size_idx, batch_size in enumerate([128, 64, 32, 16, 8, 1]):
     # print(df)
     # print(df.columns)
     
-    if batch_size in [1, 32]:
+    if batch_size in [1, 32, 128]:
         make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", 0.0, 100.0,
                        "Images per second", data_format="{:.2f}")
     make_row_chart(df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000,
