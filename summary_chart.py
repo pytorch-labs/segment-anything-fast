@@ -13,7 +13,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
         if key in df[category_column].tolist():
             x_values.append(key)
             y_values.append(df[value_column].tolist()[x_idx])
-            bar_colors.append(COLORS[x_idx])
+            bar_colors.append(COLORS[batch_size_idx])
             x_idx += 1
         else:
             x_values.append(key)
@@ -74,7 +74,7 @@ print("techniques: ", techniques)
 
 fig, axs = plt.subplots(3, 3, figsize=(20, 20))
 
-for batch_size in [128, 64, 32, 16, 8, 1]:
+for batch_size_idx, batch_size in enumerate([128, 64, 32, 16, 8, 1]):
     df = mdf[mdf["batch_size"] == batch_size]
     
     # print(df)
