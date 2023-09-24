@@ -23,6 +23,4 @@ That means the very last bar is the combination of
 - Dynamic int8 symmetric quantization
 - 2:4 sparse format
 
-These experiments were run with batch size 20.
-
 ![High level results](bar_chart.svg)
