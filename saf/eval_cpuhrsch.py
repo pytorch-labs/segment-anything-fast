@@ -118,8 +118,10 @@ def run_experiment(idx,
 # Need to use a held out set of data to build these scalars.
 
 def run_traces(*args, **kwargs):
-    # Limit to 10 batches
+    # Limit to 10 batches and run once
     kwargs['limit'] = 160
+    run_experiment(*args, **kwargs)
+
     # Folder to save results to
     traces_dir = "/home/cpuhrsch/tmp/traces/20230924"
 
@@ -153,8 +155,9 @@ def run_traces(*args, **kwargs):
 # run_traces("SDPA",           "sdpa-decoder",                "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
 # run_traces("Triton",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
 # run_traces("NT",             "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
-# run_traces("int8",           "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+run_traces("int8",           "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant", capture_output=False)
 # run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
+import sys; sys.exit(0)
 
 print_header = True
 for bs in [1, 8, 16, 32, 64, 128, 256]:
