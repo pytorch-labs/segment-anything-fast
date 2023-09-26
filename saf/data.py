@@ -254,7 +254,7 @@ def build_data(coco_img_ids,
             non_first_sizes = [s[1:] for s in sizes]
             at_most_first_ragged = all([s == non_first_sizes[0] for s in non_first_sizes])
             if at_most_first_ragged:
-                buffer = torch.cat(data, dim=0)
+                buffer = torch.cat(data, dim=0).to(dtype=dtype)
                 offsets = torch.cat([torch.zeros(1, dtype=torch.int64),
                                      torch.tensor([t.shape[0] for t in data]).cumsum(dim=0)])
                 from torch.nested._internal.nested_tensor import NestedTensor
