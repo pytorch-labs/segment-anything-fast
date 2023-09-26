@@ -206,8 +206,8 @@ class MaskDecoder(nn.Module):
         # TODO: No need to create NT by hand once we propagate it properly through Transformer
         from torch.nested._internal.nested_tensor import NestedTensor
         num_tensors = offsets.shape[0] - 1
-        masks_nt = NestedTensor(masks, offsets=offsets, nb_tensors=num_tensors)
-        iou_pred_nt = NestedTensor(iou_pred, offsets=offsets, nb_tensors=num_tensors)
+        masks_nt = NestedTensor(masks, offsets)
+        iou_pred_nt = NestedTensor(iou_pred, offsets)
         return masks_nt, iou_pred_nt
 
 
