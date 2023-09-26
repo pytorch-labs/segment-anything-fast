@@ -74,7 +74,7 @@ print("techniques: ", techniques)
 
 fig, axs = plt.subplots(3, 3, figsize=(20, 20))
 
-for batch_size_idx, batch_size in enumerate([128, 64, 32, 1]):
+for batch_size_idx, batch_size in enumerate([64, 32, 1]):
     df = mdf[mdf["batch_size"] == batch_size]
     
     # print(df)
