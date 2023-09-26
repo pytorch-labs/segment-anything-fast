@@ -20,8 +20,8 @@ fp16,7.767531243960063,codesign,2.2.0a0+git736e8fa,vit_h,1,2886,3,12.37966813725
 compile,6.961858757336935,codesign,2.2.0a0+git736e8fa,vit_h,1,2580,3,17.424216423397713,57.39138998854334,0.5837971962994857,max-autotune,True,None,False,True,False,False,True,True,32,4952,4952,None,None,False
 SDPA,6.477468407154083,sdpa-decoder,2.2.0a0+git736e8fa,vit_h,1,2517,3,18.61222525615231,53.72812687561085,0.5837852158306952,max-autotune,True,None,False,True,False,False,True,True,32,4952,4952,None,None,False
 NT,6.665131227175395,local-fork,2.2.0a0+git736e8fa,vit_h,1,2517,3,18.407254425679643,54.326407234580145,0.5837091336708939,max-autotune,True,None,False,True,False,True,True,True,32,4952,4952,None,None,False
-int8,4.070706379413605,local-fork,2.2.0a0+git736e8fa,ERROR
-Triton,2.2284859816233316,local-fork,2.2.0a0+git736e8fa,ERROR
+int8,6.923697888851166,local-fork,2.2.0a0+git736e8fa,vit_h,1,2517,3,19.91313346799963,50.21811366890089,0.583908313664475,max-autotune,True,dynamic_quant,False,True,False,True,True,True,32,4952,4952,None,None,False
+Triton,10.180021957556407,local-fork,2.2.0a0+git736e8fa,vit_h,1,2517,3,21.367796646691335,46.79939708031822,0.5851780871595195,max-autotune,True,dynamic_quant,False,True,False,True,True,True,32,4952,4952,None,None,True
 sparse,0.32324631214141847,local-fork,2.2.0a0+git736e8fa,ERROR
 fp32,0.6056428035100301,default,2.2.0a0+git736e8fa,ERROR
 fp16,3.2239867210388184,codesign,2.2.0a0+git736e8fa,vit_b,32,39339,48,35.12509147307876,28.469676748498692,0.5342724095613883,False,True,None,False,True,False,False,True,True,32,154,4928,None,None,False

@@ -63,8 +63,8 @@ def matmul_kernel_with_block_pointers(
         # check, if you can guarantee that the access is always in-bound in
         # that axis.
         # See above `Load/Store a Block Pointer` section for details.
-        a = tl.load(a_block_ptr) #, boundary_check=(0, 1))
-        b = tl.load(b_block_ptr) #, boundary_check=(0, 1))
+        a = tl.load(a_block_ptr, boundary_check=(0, 1))
+        b = tl.load(b_block_ptr, boundary_check=(0, 1))
         # We accumulate along the K dimension.
         accumulator += tl.dot(a, b)
         # Advance the block pointer to the next K block.
@@ -91,7 +91,7 @@ def matmul_kernel_with_block_pointers(
     c = c * s1 * s2
     c = c.to(tl.float16)
     # Epilogue
-    tl.store(c_block_ptr, c) #, boundary_check=(0, 1))
+    tl.store(c_block_ptr, c, boundary_check=(0, 1))
 
 class MyIntMMLibrary:
     lib = torch.library.Library("my_int_mm", "DEF")
