@@ -478,29 +478,30 @@ def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
 
     return o
 
-def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
+def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_, use_triton_sdpa_plus):
     """
     Implements SDPA but bias is addition of (rel_h + rel_w).view(..., rel_h.size(-2) * rel_w.size(-1))
     """
 
-    import math
-    sm_scale = 1. / math.sqrt(q_.size(-1))
-    q_size_2_padded = (((q_.size(-2) + 256 - 1) // 256) * 256) - q_.size(-2)
-    if q_size_2_padded == 0 and q_.size(-1) == 64:
-        # print("USING ALIGNED")
-        rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
-        o = torch.ops.wipflash2.mah_flash_aligned(q_, k_, v_, rel_h_w, sm_scale)
-        if o.numel() > 0:
-            return o
-    if q_size_2_padded == 0 and q_.size(-1) == 80:
-        # print("USING ALIGNED")
-        q = torch.nn.functional.pad(q_, (0, 128 - 80, 0, 0), "constant", 0) #.contiguous()
-        k = torch.nn.functional.pad(k_, (0, 128 - 80, 0, 0), "constant", 0) #.contiguous()
-        v = torch.nn.functional.pad(v_, (0, 128 - 80, 0, 0), "constant", 0) #.contiguous()
-        rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
-        o = torch.ops.wipflash2.mah_flash_aligned(q, k, v, rel_h_w, sm_scale)
-        if o.numel() > 0:
-            return o[:, :, :, :80] #.contiguous()
+    if use_triton_sdpa_plus:
+        import math
+        sm_scale = 1. / math.sqrt(q_.size(-1))
+        q_size_2_padded = (((q_.size(-2) + 256 - 1) // 256) * 256) - q_.size(-2)
+        if q_size_2_padded == 0 and q_.size(-1) == 64:
+            # print("USING ALIGNED")
+            rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
+            o = torch.ops.wipflash2.mah_flash_aligned(q_, k_, v_, rel_h_w, sm_scale)
+            if o.numel() > 0:
+                return o
+        if q_size_2_padded == 0 and q_.size(-1) == 80:
+            # print("USING ALIGNED")
+            q = torch.nn.functional.pad(q_, (0, 128 - 80, 0, 0), "constant", 0) #.contiguous()
+            k = torch.nn.functional.pad(k_, (0, 128 - 80, 0, 0), "constant", 0) #.contiguous()
+            v = torch.nn.functional.pad(v_, (0, 128 - 80, 0, 0), "constant", 0) #.contiguous()
+            rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
+            o = torch.ops.wipflash2.mah_flash_aligned(q, k, v, rel_h_w, sm_scale)
+            if o.numel() > 0:
+                return o[:, :, :, :80] #.contiguous()
     attn_bias = (rel_h_ + rel_w_).view(q_.size(0), q_.size(1), rel_h_.size(2), rel_h_.size(3) * rel_w_.size(4))
     return torch.nn.functional.scaled_dot_product_attention(q_, k_, v_, attn_mask=attn_bias)
     print("USING NOT ALIGNED")

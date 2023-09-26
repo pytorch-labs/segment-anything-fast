@@ -49,7 +49,7 @@ def matmul_kernel_with_block_pointers(
                                     order=(1, 0))
     b_block_ptr = tl.make_block_ptr(base=b_ptr, shape=(K, N), strides=(stride_bk, stride_bn),
                                     offsets=(0, pid_n * BLOCK_SIZE_N), block_shape=(BLOCK_SIZE_K, BLOCK_SIZE_N),
-                                    order=(1, 0))
+                                    order=(0, 1))
 
     # -----------------------------------------------------------
     # Iterate to compute a block of the C matrix.
@@ -63,8 +63,8 @@ def matmul_kernel_with_block_pointers(
         # check, if you can guarantee that the access is always in-bound in
         # that axis.
         # See above `Load/Store a Block Pointer` section for details.
-        a = tl.load(a_block_ptr, boundary_check=(0, 1))
-        b = tl.load(b_block_ptr, boundary_check=(0, 1))
+        a = tl.load(a_block_ptr) #, boundary_check=(0, 1))
+        b = tl.load(b_block_ptr) #, boundary_check=(0, 1))
         # We accumulate along the K dimension.
         accumulator += tl.dot(a, b)
         # Advance the block pointer to the next K block.
@@ -91,7 +91,7 @@ def matmul_kernel_with_block_pointers(
     c = c * s1 * s2
     c = c.to(tl.float16)
     # Epilogue
-    tl.store(c_block_ptr, c, boundary_check=(0, 1))
+    tl.store(c_block_ptr, c) #, boundary_check=(0, 1))
 
 class MyIntMMLibrary:
     lib = torch.library.Library("my_int_mm", "DEF")
@@ -109,6 +109,7 @@ class MyIntMMLibrary:
 
 import torch.utils.benchmark as benchmark
 def benchmark_torch_function_in_microseconds(f, *args, **kwargs):
+    f(*args, **kwargs)
     try:
         f(*args, **kwargs)
         t0 = benchmark.Timer(
@@ -165,14 +166,13 @@ def _find_config(key_tensors, function):
     if BEST_CONFIGS is None:
         BEST_CONFIGS = _load_best_configs()
     key = _create_best_configs_key(key_tensors)
-    # if key in BEST_CONFIGS:
-    #     return BEST_CONFIGS[key], False
-    best_config = BEST_CONFIGS[key]
+    if key in BEST_CONFIGS:
+        return BEST_CONFIGS[key], False
 
     print(f"Could not find a config for key {key}")
     import itertools
-    configs = [best_config]
-    for (BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps) in itertools.product([32, 64, 128], [32, 64, 128, 256], [32, 64, 128, 256], [4, 8, 16], [3, 4, 5], [2, 4, 8]):
+    configs = []
+    for (BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps) in itertools.product([64, 128], [64, 128, 256], [32, 64], [8], [3, 4, 5], [2, 4, 8]):
         configs.append((BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps))
     print(f"Trying {len(configs)} configurations.")
     best, best_config = _autotune(configs, function)
@@ -189,7 +189,7 @@ def _int_mm_dequant(a, b, scalar1, scalar2, out_dtype):
     # Check constraints.
     assert a.shape[1] == b.shape[0], "Incompatible dimensions"
     assert a.is_contiguous(), "Matrix A must be contiguous"
-    # assert b.is_contiguous(), "Matrix B must be contiguous"
+    assert b.transpose(0, 1).is_contiguous(), "Matrix B must be transpose contiguous"
     M, K = a.shape
     K, N = b.shape
     # Allocates output.

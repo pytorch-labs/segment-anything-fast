@@ -67,12 +67,14 @@ def run_experiment(idx,
                    limit=None,
                    profile_path=None,
                    profile_top=False,
-                   memory_path=None):
+                   memory_path=None,
+                   use_triton_sdpa_plus=False):
     args = root_cmd
     args = args + ["--sam_model_type", model_type]
     args = args + ["--batch_size", str(batch_size)]
     args = args + ["--num_workers", str(num_workers)]
     args = args + ["--use_compile", use_compile]
+    args = args + ["--use_triton_sdpa_plus", str(use_triton_sdpa_plus)]
     if sam_commit_name == "local-fork":
         args = args + ["--use_local_sam_fork", "True"]
     else:
@@ -155,8 +157,12 @@ def run_traces(*args, **kwargs):
 # run_traces("SDPA",           "sdpa-decoder",                "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
 # run_traces("Triton",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
 # run_traces("NT",             "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
-run_traces("int8",           "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant", capture_output=False)
+# run_traces("int8",           "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+# run_traces("static",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant", capture_output=False)
 # run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
+
+run_experiment("int8",       "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant", use_triton_sdpa_plus=False, capture_output=False)
+run_experiment("int8",       "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant", use_triton_sdpa_plus=True,  capture_output=False)
 import sys; sys.exit(0)
 
 print_header = True

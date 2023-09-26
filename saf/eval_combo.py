@@ -292,6 +292,7 @@ def run(
     profile_top=False,
     memory_path=None,
     use_local_sam_fork=False,
+    use_triton_sdpa_plus=False,
 ):
     from torch._inductor import config as tritonconfig
     tritonconfig.triton.unique_kernel_names = True
@@ -331,6 +332,7 @@ def run(
 
     for block in predictor.model.image_encoder.blocks:
         block.attn.use_rel_pos = use_rel_pos
+        block.attn.use_triton_sdpa_plus = use_triton_sdpa_plus
 
     if compress == "dynamic_quant":
         from dynamic_quant import apply_dynamic_quant
@@ -339,10 +341,10 @@ def run(
         from static_quant import apply_static_quant
         apply_static_quant(predictor.model.image_encoder)
         from pathlib import Path
-        weights_path = Path(f"{sam_model_type}_{batch_size}_static_quant_weights.ptk")
+        weights_path = Path(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
         if weights_path.exists() and weights_path.is_file():
             print("Loading static quantization weights")
-            weights = torch.load(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
+            weights = torch.load(weights_path)
             from static_quant import set_x_absmax
             set_x_absmax(predictor.model.image_encoder, weights)
     elif compress == "sparse":
@@ -433,9 +435,9 @@ def run(
 
     if print_header:
         print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s(avg)", "batch_ms(avg)/batch_size", "mIoU", "use_compile",
-              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers", "num_batches", "num_images", "profile_path", "memory_path"]))
+              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers", "num_batches", "num_images", "profile_path", "memory_path", "use_triton_sdpa_plus"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, batch_ms_batch_size, mIoU, use_compile,
-          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers, num_batches, num_images, profile_path, memory_path])))
+          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers, num_batches, num_images, profile_path, memory_path, use_triton_sdpa_plus])))
 
 
 if __name__ == '__main__':
