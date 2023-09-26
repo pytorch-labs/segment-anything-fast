@@ -99,7 +99,7 @@ def _fwd_kernel(
     qk_scale = sm_scale * 1.44269504
     # load q: it will stay in SRAM throughout
     q = tl.load(Q_block_ptr) #, boundary_check=(1, 0), padding_option="zero")
-    q = (q * qk_scale).to(tl.float16)
+    q = (q * qk_scale).to(tl.bfloat16)
     # loop over k, v and update accumulator
     lo = 0
     hi = N_CTX + P_SEQ
@@ -111,8 +111,8 @@ def _fwd_kernel(
         k = tl.load(K_block_ptr) #, boundary_check=(0, 1), padding_option="zero")
         v = tl.load(V_block_ptr) #, boundary_check=(1, 0), padding_option="zero")
         # -- compute qk ---
-        qk = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.float16)
-        qk += tl.dot(q, k, out_dtype=tl.float16) # * qk_scale).to(tl.float16)
+        qk = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.bfloat16)
+        qk += tl.dot(q, k, out_dtype=tl.bfloat16) # * qk_scale).to(tl.float16)
 
         # -- compute rel_h[:, None] + rel_w[None, :] bias ---
 
@@ -130,7 +130,7 @@ def _fwd_kernel(
         p = tl.math.exp2(qk - m_i_new[:, None])
         # -- scale and update acc --
         acc *= alpha[:, None]
-        acc += tl.dot(p.to(tl.float16), v)
+        acc += tl.dot(p.to(tl.bfloat16), v)
         # -- update m_i and l_i --
         l_i = l_i * alpha + tl.sum(p, 1)
         m_i = m_i_new
@@ -150,7 +150,7 @@ def _fwd_kernel(
         block_shape=(BLOCK_M, BLOCK_DMODEL),
         order=(1, 0)
     )
-    tl.store(O_block_ptr, acc.to(tl.float16))
+    tl.store(O_block_ptr, acc.to(tl.bfloat16))
 
 def _attention_rel_h_rel_w_kernel(q, k, v, rel_h_w, sm_scale):
     # shape constraints
@@ -277,7 +277,7 @@ def _fwd_kernel_aligned(
     qk_scale = sm_scale * 1.44269504
     # load q: it will stay in SRAM throughout
     q = tl.load(Q_block_ptr) #, boundary_check=(1, 0), padding_option="zero")
-    q = (q * qk_scale).to(tl.float16)
+    q = (q * qk_scale).to(tl.bfloat16)
     # loop over k, v and update accumulator
     lo = 0
     hi = N_CTX + P_SEQ
@@ -292,8 +292,8 @@ def _fwd_kernel_aligned(
         k = tl.load(K_block_ptr) #, boundary_check=(0, 1), padding_option="zero")
         v = tl.load(V_block_ptr) #, boundary_check=(1, 0), padding_option="zero")
         # -- compute qk ---
-        qk = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.float16)
-        qk += tl.dot(q, k, out_dtype=tl.float16) # * qk_scale).to(tl.float16)
+        qk = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.bfloat16)
+        qk += tl.dot(q, k, out_dtype=tl.bfloat16) # * qk_scale).to(tl.float16)
 
         # -- compute rel_h[:, None] + rel_w[None, :] bias ---
 
@@ -307,7 +307,7 @@ def _fwd_kernel_aligned(
         p = tl.math.exp2(qk - m_i_new[:, None])
         # -- scale and update acc --
         acc *= alpha[:, None]
-        acc += tl.dot(p.to(tl.float16), v)
+        acc += tl.dot(p.to(tl.bfloat16), v)
         # -- update m_i and l_i --
         l_i = l_i * alpha + tl.sum(p, 1)
         m_i = m_i_new
@@ -327,7 +327,7 @@ def _fwd_kernel_aligned(
         block_shape=(BLOCK_M, BLOCK_DMODEL),
         order=(1, 0)
     )
-    tl.store(O_block_ptr, acc.to(tl.float16))
+    tl.store(O_block_ptr, acc.to(tl.bfloat16))
 
 
 def _autotune(configs, function):

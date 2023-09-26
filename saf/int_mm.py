@@ -89,7 +89,7 @@ def matmul_kernel_with_block_pointers(
     s1 = tl.load(s1_block_ptr, boundary_check=(0, 1))
     s2 = tl.load(s2_block_ptr, boundary_check=(0, 1))
     c = c * s1 * s2
-    c = c.to(tl.float16)
+    c = c.to(tl.bfloat16)
     # Epilogue
     tl.store(c_block_ptr, c, boundary_check=(0, 1))
 
@@ -193,12 +193,12 @@ def _int_mm_dequant(a, b, scalar1, scalar2, out_dtype):
     M, K = a.shape
     K, N = b.shape
     # Allocates output.
-    c = torch.empty((M, N), device=a.device, dtype=torch.float16)
+    c = torch.empty((M, N), device=a.device, dtype=torch.bfloat16)
     scalar1 = scalar1.expand_as(c)
     scalar2 = scalar2.expand_as(c)
     assert scalar1.dim() == 2
     assert scalar2.dim() == 2
-    assert out_dtype == torch.float16
+    assert out_dtype == torch.bfloat16
     # 1D launch kernel where each block gets its own program.
     grid = lambda META: (
         triton.cdiv(M, META['BLOCK_SIZE_M']) * triton.cdiv(N, META['BLOCK_SIZE_N']),
@@ -233,7 +233,7 @@ def _int_mm_dequant_meta(a, b, scalar1, scalar2, out_dtype):
     M, K = a.shape
     K, N = b.shape
     # Allocates output.
-    return torch.empty((M, N), device=a.device, dtype=torch.float16)
+    return torch.empty((M, N), device=a.device, dtype=torch.bfloat16)
 
 MyIntMMLibrary.registerOp(
     "int_mm",
