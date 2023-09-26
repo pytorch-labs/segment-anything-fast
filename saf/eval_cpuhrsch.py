@@ -156,9 +156,6 @@ def run_traces(*args, **kwargs):
 # run_traces("int8",           "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
 # run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
-run_experiment("NT",         "local-fork",                  "vit_b", 32, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, capture_output=False)
-import sys; sys.exit(0)
-
 print_header = True
 for bs in [1, 8, 16, 32, 64, 128, 256]:
     run_experiment("fp32",       "default",                     "vit_b", bs, 32, print_header=print_header)
