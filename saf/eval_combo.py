@@ -54,8 +54,7 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
         datapoints = list(zip(*(batch[7:])))
         nt_coords = batch[1].to(device=device, non_blocking=True)
         nt_gt_masks = batch[4].to(device=device, non_blocking=True)
-        nt_fg_labels = torch.nested.nested_tensor([torch.ones(
-            (coords.size(0), 1), dtype=torch.int, device=device) for coords in nt_coords.unbind()])
+        nt_fg_labels = torch.ones_like(nt_coords, dtype=torch.int).prod(dim=-1, keepdim=True)
         if pad_input_image_batch:
             # Pad to a static shape to avoid recompilation
             input_image_batch = pad_to_batch_size(input_image_batch, batch_size, device)
