@@ -213,48 +213,6 @@ class SamPredictor:
         if not self.is_image_set:
             raise RuntimeError("An image must be set with .set_image(...) before mask prediction.")
 
-        if point_coords.is_nested:
-            assert point_labels.is_nested
-            assert boxes is None
-            assert mask_input is None
-            assert multimask_output
-            assert not return_logits
-            assert point_coords is not None
-            assert point_labels is not None
-
-            if point_coords is not None:
-                points = (point_coords, point_labels)
-            else:
-                points = None
-
-            # Embed prompts
-            sparse_embeddings, dense_embeddings = self.model.prompt_encoder(
-                points=points,
-                boxes=boxes,
-                masks=mask_input,
-            )
-
-            low_res_masks, iou_predictions = self.model.mask_decoder(
-                image_embeddings=self.features_batch,
-                image_pe=self.model.prompt_encoder.get_dense_pe(),
-                sparse_prompt_embeddings=sparse_embeddings,
-                dense_prompt_embeddings=dense_embeddings,
-                multimask_output=multimask_output,
-            )
-
-            masks = []
-            for lrm, input_size, original_size in zip(low_res_masks.unbind(), self.input_sizes, self.original_sizes, strict=True):
-                # Upscale the masks to the original image resolution
-                m = self.model.postprocess_masks(lrm, input_size, original_size)
-                masks.append(m)
-            masks = torch.nested.nested_tensor(masks)
-
-            if not return_logits:
-                masks = masks > self.model.mask_threshold
-
-            return masks, iou_predictions, low_res_masks
-
-
         if point_coords is not None:
             points = (point_coords, point_labels)
         else:
