@@ -222,19 +222,17 @@ class SamPredictor:
             assert point_coords is not None
             assert point_labels is not None
 
+            if point_coords is not None:
+                points = (point_coords, point_labels)
+            else:
+                points = None
+
             # Embed prompts
-            sparse_embeddings = []
-            dense_embeddings = []
-            for c, l in zip(point_coords.unbind(), point_labels.unbind(), strict=True):
-                s, d = self.model.prompt_encoder(
-                    points=(c, l),
-                    boxes=boxes,
-                    masks=mask_input,
-                )
-                sparse_embeddings.append(s)
-                dense_embeddings.append(d)
-            sparse_embeddings = torch.nested.nested_tensor(sparse_embeddings)
-            dense_embeddings = torch.nested.nested_tensor(dense_embeddings)
+            sparse_embeddings, dense_embeddings = self.model.prompt_encoder(
+                points=points,
+                boxes=boxes,
+                masks=mask_input,
+            )
 
             low_res_masks, iou_predictions = self.model.mask_decoder(
                 image_embeddings=self.features_batch,
@@ -278,8 +276,16 @@ class SamPredictor:
             multimask_output=multimask_output,
         )
 
-        # Upscale the masks to the original image resolution
-        masks = self.model.postprocess_masks(low_res_masks, self.input_size, self.original_size)
+        if low_res_masks.is_nested:
+            masks = []
+            for lrm, input_size, original_size in zip(low_res_masks.unbind(), self.input_sizes, self.original_sizes, strict=True):
+                # Upscale the masks to the original image resolution
+                m = self.model.postprocess_masks(lrm, input_size, original_size)
+                masks.append(m)
+            masks = torch.nested.nested_tensor(masks)
+        else:
+            # Upscale the masks to the original image resolution
+            masks = self.model.postprocess_masks(low_res_masks, self.input_size, self.original_size)
 
         if not return_logits:
             masks = masks > self.model.mask_threshold

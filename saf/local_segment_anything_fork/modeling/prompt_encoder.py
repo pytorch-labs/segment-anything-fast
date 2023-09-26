@@ -79,21 +79,24 @@ class PromptEncoder(nn.Module):
         """Embeds point prompts."""
         points = points + 0.5  # Shift to center of pixel
         if pad:
-            padding_point = torch.zeros((points.shape[0], 1, 2), device=points.device, dtype=points.dtype)
-            padding_label = -torch.ones((labels.shape[0], 1), device=labels.device, dtype=points.dtype)
-            points = torch.cat([points, padding_point], dim=1)
-            labels = torch.cat([labels, padding_label], dim=1)
+            if points.is_nested:
+                points = torch.cat([points, torch.zeros_like(points)], dim=2)
+                labels = torch.cat([labels, -torch.ones_like(labels)], dim=2)
+            else:
+                padding_point = torch.zeros((points.shape[0], 1, 2), device=points.device, dtype=points.dtype)
+                padding_label = -torch.ones((labels.shape[0], 1), device=labels.device, dtype=points.dtype)
+                points = torch.cat([points, padding_point], dim=1)
+                labels = torch.cat([labels, padding_label], dim=1)
         point_embedding = self.pe_layer.forward_with_coords(points, self.input_image_size)
         point_embedding = torch.where((labels == -1).unsqueeze(-1).expand_as(point_embedding),
-                                      self.not_a_point_embed.weight.unsqueeze(0).expand_as(point_embedding),
+                                      torch.zeros_like(point_embedding) + self.not_a_point_embed.weight,
                                       point_embedding)
         point_embedding = torch.where((labels == 0).unsqueeze(-1).expand_as(point_embedding),
-                                      point_embedding + self.point_embeddings[0].weight.unsqueeze(0).expand_as(point_embedding),
+                                      point_embedding + self.point_embeddings[0].weight,
                                       point_embedding)
         point_embedding = torch.where((labels == 1).unsqueeze(-1).expand_as(point_embedding),
-                                      point_embedding + self.point_embeddings[1].weight.unsqueeze(0).expand_as(point_embedding),
+                                      point_embedding + self.point_embeddings[1].weight,
                                       point_embedding)
-
         return point_embedding
 
     def _embed_boxes(self, boxes: torch.Tensor) -> torch.Tensor:
@@ -155,21 +158,27 @@ class PromptEncoder(nn.Module):
             Bx(embed_dim)x(embed_H)x(embed_W)
         """
         bs = self._get_batch_size(points, boxes, masks)
-        sparse_embeddings = torch.empty((bs, 0, self.embed_dim), device=self._get_device())
         if points is not None:
             coords, labels = points
-            point_embeddings = self._embed_points(coords, labels, pad=(boxes is None))
-            sparse_embeddings = torch.cat([sparse_embeddings, point_embeddings], dim=1)
+            sparse_embeddings = self._embed_points(coords, labels, pad=(boxes is None))
         if boxes is not None:
-            box_embeddings = self._embed_boxes(boxes)
-            sparse_embeddings = torch.cat([sparse_embeddings, box_embeddings], dim=1)
+            sparse_embeddings = self._embed_boxes(boxes)
 
         if masks is not None:
             dense_embeddings = self._embed_masks(masks)
         else:
-            dense_embeddings = self.no_mask_embed.weight.reshape(1, -1, 1, 1).expand(
-                bs, -1, self.image_embedding_size[0], self.image_embedding_size[1]
-            )
+            if sparse_embeddings.is_nested:
+                embed_weight = (
+                    self.no_mask_embed.weight.squeeze(0).unsqueeze(-1).unsqueeze(-1).expand(
+                        -1, self.image_embedding_size[0], self.image_embedding_size[1])
+                )
+                dense_embeddings = (
+                    torch.zeros_like(sparse_embeddings.unsqueeze(2).prod(dim=-1, keepdim=True).prod(
+                        dim=-2, keepdim=True)) + embed_weight
+                )
+            else:
+                dense_embeddings = self.no_mask_embed.weight.reshape(1, -1, 1, 1).expand(
+                    bs, -1, self.image_embedding_size[0], self.image_embedding_size[1])
 
         return sparse_embeddings.to(dense_embeddings.dtype), dense_embeddings
 
@@ -213,8 +222,6 @@ class PositionEmbeddingRandom(nn.Module):
     def forward_with_coords(
         self, coords_input: torch.Tensor, image_size: Tuple[int, int]
     ) -> torch.Tensor:
-        """Positionally encode points that are not normalized to [0,1]."""
-        coords = coords_input.clone()
-        coords[:, :, 0] = coords[:, :, 0] / image_size[1]
-        coords[:, :, 1] = coords[:, :, 1] / image_size[0]
-        return self._pe_encoding(coords) # .to(torch.float))  # B x N x C
+        # Take advantage of square image size to simplify normalization
+        assert image_size[1] == image_size[0]
+        return self._pe_encoding(coords_input / image_size[1])  # B x N x C
