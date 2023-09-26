@@ -53,9 +53,8 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
     with torch.autograd.profiler.record_function("nt data transfer"):
         datapoints = list(zip(*(batch[7:])))
         nt_coords = batch[1].to(device=device, non_blocking=True)
-        nt_gt_masks = batch[4].to(device=device, non_blocking=True)
-        nt_fg_labels = torch.nested.nested_tensor([torch.ones(
-            (coords.size(0), 1), dtype=torch.int, device=device) for coords in nt_coords.unbind()])
+        gt_masks_lists = unbind_jagged(*([device] + batch[4:7]))
+        nt_fg_labels = torch.ones_like(nt_coords, dtype=torch.int).prod(dim=-1, keepdim=True)
         if pad_input_image_batch:
             # Pad to a static shape to avoid recompilation
             input_image_batch = pad_to_batch_size(input_image_batch, batch_size, device)
@@ -89,7 +88,7 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
             )
             result_batch = [create_result_entry(d[0], g, m, s, d[3]) for (m, s, d, g) in zip(masks.unbind(),
                                                                                      scores.unbind(), datapoints,
-                                                                                     nt_gt_masks.unbind())]
+                                                                                     gt_masks_lists)]
         # After all kernels have been launched we synchronize again and measure
         # the amount of time spent on the GPU. This is a fairly tight measurement
         # around the launched GPU kernels and excludes data movement from host
