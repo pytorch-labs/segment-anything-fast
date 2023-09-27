@@ -248,8 +248,8 @@ lib.define("custom_flash_aligned(Tensor q, Tensor k, Tensor v, Tensor rel_h_w, f
 
 # All that's needed for torch.compile support
 @torch.library.impl(lib, "custom_flash_aligned", "Meta")
-def _attention_rel_h_rel_w_kernel_aligned_meta(q_, k_, v_, rel_h_w, sm_scale):
-    return q_.contiguous()
+def _attention_rel_h_rel_w_kernel_aligned_meta(q, k, v, rel_h_w, sm_scale):
+    return q.contiguous()
 
 
 @torch.library.impl(lib, "custom_flash_aligned", "CUDA")
