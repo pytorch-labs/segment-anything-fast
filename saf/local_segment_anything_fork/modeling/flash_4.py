@@ -9,31 +9,17 @@ Extra Credits:
 - Rabe and Staats (https://arxiv.org/pdf/2112.05682v2.pdf)
 - Adam P. Goucher for simplified vector math
 
+This version was modified to fuse an addition of two attention masks into one
+attn_bias = (rel_h_ + rel_w_).view(q_.size(0), q_.size(1), rel_h_.size(2), rel_h_.size(3) * rel_w_.size(4))
+
+We use attn_mask and attn_bias interchangeably.
+
 """
 
 import torch
 
 import triton
 import triton.language as tl
-
-
-class _CustomLibrary:
-    lib = torch.library.Library("customflash", "DEF")
-    ops_table: dict[tuple[str, str], callable] = {}
-
-    @classmethod
-    def registerOp(cls, op_key, full_schema, op_impl, dispatch_key):
-        if (op_key, dispatch_key) not in cls.ops_table:
-            if (op_key, "CUDA") not in cls.ops_table:
-                cls.lib.define(full_schema)
-            cls.lib.impl("customflash::" + op_key, op_impl, dispatch_key)
-            cls.ops_table[(op_key, dispatch_key)] = op_impl
-        return cls.ops_table[(op_key, dispatch_key)]
-
-
-@triton.jit
-def max_fn(x, y):
-    return tl.math.max(x, y)
 
 
 @triton.jit
@@ -52,12 +38,9 @@ def _fwd_kernel_aligned(
     BIAS_LAST_SIZE: tl.constexpr,
     B0_NUMEL: tl.constexpr,
     BLOCK_DMODEL: tl.constexpr,
-#    **META):
-     BLOCK_M: tl.constexpr,
-     BLOCK_N: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
 ):
-    # BLOCK_M = META['BLOCK_M']
-    # BLOCK_N = META['BLOCK_N']
     start_m = tl.program_id(0)
     off_hz = tl.program_id(1)
     q_offset = off_hz * stride_qh
@@ -97,7 +80,7 @@ def _fwd_kernel_aligned(
     # don't work as expected with `exp` in the loop
     qk_scale = sm_scale * 1.44269504
     # load q: it will stay in SRAM throughout
-    q = tl.load(Q_block_ptr) #, boundary_check=(1, 0), padding_option="zero")
+    q = tl.load(Q_block_ptr)  # , boundary_check=(1, 0), padding_option="zero")
     q = (q * qk_scale).to(tl.bfloat16)
     # loop over k, v and update accumulator
     lo = 0
@@ -106,12 +89,16 @@ def _fwd_kernel_aligned(
     b_ptr_offsets_m = tl.arange(0, BLOCK_M)
 
     b_offset = off_hz * stride_b0h
-    b_ptr_offsets_n_1 = (tl.arange(0, BLOCK_N) % BIAS_LAST_SIZE) + BIAS_LAST_SIZE
-    b1 = tl.load(B0 + b_offset + ((start_m * BLOCK_M + b_ptr_offsets_m) * stride_b0m)[:, None] + b_ptr_offsets_n_1[None, :])
+    b_ptr_offsets_n_1 = (tl.arange(0, BLOCK_N) %
+                         BIAS_LAST_SIZE) + BIAS_LAST_SIZE
+    b1 = tl.load(B0 + b_offset + ((start_m * BLOCK_M + b_ptr_offsets_m)
+                 * stride_b0m)[:, None] + b_ptr_offsets_n_1[None, :])
     for start_n in range(lo, hi, BLOCK_N):
         # -- load k, v --
-        k = tl.load(K_block_ptr) #, boundary_check=(0, 1), padding_option="zero")
-        v = tl.load(V_block_ptr) #, boundary_check=(1, 0), padding_option="zero")
+        # , boundary_check=(0, 1), padding_option="zero")
+        k = tl.load(K_block_ptr)
+        # , boundary_check=(1, 0), padding_option="zero")
+        v = tl.load(V_block_ptr)
         # -- compute qk ---
         qk = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.bfloat16)
         qk += tl.dot(q, k, out_dtype=tl.bfloat16)
@@ -119,7 +106,8 @@ def _fwd_kernel_aligned(
         # -- compute rel_h[:, None] + rel_w[None, :] bias ---
 
         # Bias
-        b0 = tl.load(B0 + b_offset + ((start_m * BLOCK_M + b_ptr_offsets_m) * stride_b0m)[:, None] + start_n // BLOCK_N)
+        b0 = tl.load(B0 + b_offset + ((start_m * BLOCK_M + b_ptr_offsets_m)
+                     * stride_b0m)[:, None] + start_n // BLOCK_N)
         qk += (b0 + b1)
 
         # -- compute scaling constant ---
@@ -153,6 +141,7 @@ def _fwd_kernel_aligned(
 
 def _autotune(configs, function):
     import torch.utils.benchmark as benchmark
+
     def benchmark_torch_function_in_microseconds(f, *args, **kwargs):
         try:
             f(*args, **kwargs)
@@ -167,7 +156,8 @@ def _autotune(configs, function):
     best_config = None
     for config in configs:
         BLOCK_M, BLOCK_N, num_warps, num_stages = config
-        t_config = benchmark_torch_function_in_microseconds(function, BLOCK_M, BLOCK_N, num_warps, num_stages)
+        t_config = benchmark_torch_function_in_microseconds(
+            function, BLOCK_M, BLOCK_N, num_warps, num_stages)
         if t_config is not None:
             if best is not None:
                 if t_config < best:
@@ -185,10 +175,15 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
                                                  BLOCK_N,
                                                  num_warps,
                                                  num_stages):
-    Lq, Lk, Lv = q.shape[-1], k.shape[-1], v.shape[-1]
+    _, Lk, _ = q.shape[-1], k.shape[-1], v.shape[-1]
     assert q.size() == k.size()
     assert q.size() == v.size()
     assert q.size(-2) == rel_h_w.size(-2)
+    assert q.dtype == torch.bfloat16
+    assert k.dtype == torch.bfloat16
+    assert v.dtype == torch.bfloat16
+    assert o.dtype == torch.bfloat16
+    assert rel_h_w.dtype == torch.bfloat16
     assert rel_h_w.size(-1) == 128
     # assert rel_h_w.size(-1) == 2 * BLOCK_N
 
@@ -219,6 +214,7 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
         num_warps=num_warps,
         num_stages=num_stages)
 
+
 def _load_best_configs():
     from pathlib import Path
     saved_configs = Path("flash_4_configs_a100.p")
@@ -228,6 +224,7 @@ def _load_best_configs():
             print(f"Loading best configs from file {saved_configs}")
             return pickle.load(f)
 
+
 def _save_best_configs(best_configs):
     from pathlib import Path
     saved_configs = Path("flash_4_configs_a100.p")
@@ -236,14 +233,29 @@ def _save_best_configs(best_configs):
         print(f"Saving best configs to file {saved_configs}")
         pickle.dump(best_configs, f)
 
+
 def _create_best_configs_key(q, k, v, rel_h_w, o):
     key = (q.size(),   k.size(),   v.size(),   rel_h_w.size(),   o.size(),
            q.stride(), k.stride(), v.stride(), rel_h_w.stride(), o.stride())
     return key
 
+
 BEST_CONFIGS = None
 
+lib = torch.library.Library("customflash", "FRAGMENT")
+lib.define("custom_flash_aligned(Tensor q, Tensor k, Tensor v, Tensor rel_h_w, float sm_scale) -> Tensor")
+
+
+@torch.library.impl(lib, "custom_flash_aligned", "Meta")
+def _attention_rel_h_rel_w_kernel_aligned_meta(q_, k_, v_, rel_h_w, sm_scale):
+    return q_.contiguous()
+
+
+@torch.library.impl(lib, "custom_flash_aligned", "CUDA")
 def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
+    # This is likely not needed, but without it the kernel
+    # is guaranteed to fail. If the inputs are already contiguous
+    # these are cheap checks via is_contiguous and do nothing.
     q = q.contiguous()
     k = k.contiguous()
     v = v.contiguous()
@@ -289,9 +301,12 @@ def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
 
     return o
 
+
 def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
     """
-    Implements SDPA but bias is addition of (rel_h + rel_w).view(..., rel_h.size(-2) * rel_w.size(-1))
+    Writing this as a composite allows torch.compile to fuse
+    the needed padding into previous operations and memory
+    allocations.
     """
 
     import math
@@ -301,7 +316,8 @@ def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
     # vit_b and vit_l
     if q_size_2_padded == 0 and q_.size(-1) == 64:
         rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
-        o = torch.ops.customflash.mah_flash_aligned(q_, k_, v_, rel_h_w, sm_scale)
+        o = torch.ops.customflash.custom_flash_aligned(
+            q_, k_, v_, rel_h_w, sm_scale)
         if o.numel() > 0:
             return o
     # vit_h
@@ -311,28 +327,10 @@ def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
         k = torch.nn.functional.pad(k_, (0, 128 - 80, 0, 0), "constant", 0)
         v = torch.nn.functional.pad(v_, (0, 128 - 80, 0, 0), "constant", 0)
         rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
-        o = torch.ops.customflash.custom_flash_aligned(q, k, v, rel_h_w, sm_scale)
+        o = torch.ops.customflash.custom_flash_aligned(
+            q, k, v, rel_h_w, sm_scale)
         if o.numel() > 0:
             return o[:, :, :, :80]
-    attn_bias = (rel_h_ + rel_w_).view(q_.size(0), q_.size(1), rel_h_.size(2), rel_h_.size(3) * rel_w_.size(4))
+    attn_bias = (rel_h_ + rel_w_).view(q_.size(0), q_.size(1),
+                                       rel_h_.size(2), rel_h_.size(3) * rel_w_.size(4))
     return torch.nn.functional.scaled_dot_product_attention(q_, k_, v_, attn_mask=attn_bias)
-
-
-_CustomLibrary.registerOp(
-    "custom_flash_aligned",
-    "custom_flash_aligned(Tensor q, Tensor k, Tensor v, Tensor rel_h_w, float sm_scale) -> Tensor",
-    _attention_rel_h_rel_w_kernel_aligned,
-    "CUDA",
-)
-
-
-def _attention_rel_h_rel_w_kernel_aligned_meta(q_, k_, v_, rel_h_w, sm_scale):
-    return q_.contiguous()
-
-
-_CustomLibrary.registerOp(
-    "custom_flash_aligned",
-    "custom_flash_aligned(Tensor q, Tensor k, Tensor v, Tensor rel_h_w, float sm_scale) -> Tensor",
-    _attention_rel_h_rel_w_kernel_aligned_meta,
-    "Meta",
-)
