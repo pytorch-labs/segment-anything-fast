@@ -318,7 +318,7 @@ def run(
 
     def prep_model(model, use_half):
         if use_half:
-            return model.eval().half()
+            return model.eval().bfloat16()
         return model.eval()
 
     predictor.model.image_encoder = prep_model(
