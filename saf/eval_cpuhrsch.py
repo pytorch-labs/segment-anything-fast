@@ -166,7 +166,7 @@ for bs in [1, 64]:
     run_experiment("Triton",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune")
     if bs > 1:
         run_experiment("NT",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1))
-    run_experiment("int8",       "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant", capture_output=False)
+    run_experiment("int8",       "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant")
     run_experiment("sparse",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="int4_dynamic_quant_sparse")
 
     # run_experiment("fp32",       "default",                     "vit_l", bs, 32)
