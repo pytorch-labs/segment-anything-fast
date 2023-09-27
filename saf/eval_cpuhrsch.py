@@ -160,7 +160,7 @@ print_header = True
 for bs in [1, 64]:
     # run_experiment("fp32",       "default",                     "vit_b", bs, 32, print_header=print_header)
     print_header = False
-    run_experiment("bf16",       "codesign",                    "vit_b", bs, 32, use_half=True, capture_output=False)
+    run_experiment("bf16",       "codesign",                    "vit_b", bs, 32, use_half=True)
     run_experiment("compile",    "codesign",                    "vit_b", bs, 32, use_half=True,  use_compile="max-autotune")
     run_experiment("SDPA",       "sdpa-decoder",                "vit_b", bs, 32, use_half=True,  use_compile="max-autotune")
     run_experiment("Triton",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune")
