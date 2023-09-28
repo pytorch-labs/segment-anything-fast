@@ -181,9 +181,21 @@ def _find_config(key_tensors, function):
     _save_best_configs(BEST_CONFIGS)
     return best_config, True
 
+lib = torch.library.Library("custom_int_mm", "FRAGMENT")
+lib.define("int_mm_dequant(Tensor a, Tensor b, Tensor scalar1, Tensor scalar2, ScalarType out_dtype) -> Tensor")
+
+# All that's needed for torch.compile support
+@torch.library.impl(lib, "int_mm_dequant", "Meta")
+def _int_mm_dequant_meta(a, b, scalar1, scalar2, out_dtype):
+    M, K = a.shape
+    K, N = b.shape
+    # Allocates output.
+    return torch.empty((M, N), device=a.device, dtype=torch.bfloat16)
+
 
 # We can now create a convenience wrapper function that only takes two input tensors,
 # and (1) checks any shape constraint; (2) allocates the output; (3) launches the above kernel.
+@torch.library.impl(lib, "int_mm_dequant", "CUDA")
 def _int_mm_dequant(a, b, scalar1, scalar2, out_dtype):
     # b = b.contiguous()
     # Check constraints.
@@ -228,23 +240,3 @@ def _int_mm_dequant(a, b, scalar1, scalar2, out_dtype):
     partial_matmul_kernel(*best_config)
 
     return c
-
-def _int_mm_dequant_meta(a, b, scalar1, scalar2, out_dtype):
-    M, K = a.shape
-    K, N = b.shape
-    # Allocates output.
-    return torch.empty((M, N), device=a.device, dtype=torch.bfloat16)
-
-MyIntMMLibrary.registerOp(
-    "int_mm",
-    "int_mm(Tensor a, Tensor b, Tensor scalar1, Tensor scalar2, ScalarType out_dtype) -> Tensor",
-    _int_mm_dequant,
-    "CUDA",
-)
-
-MyIntMMLibrary.registerOp(
-    "int_mm",
-    "int_mm(Tensor a, Tensor b, Tensor scalar1, Tensor scalar2, ScalarType out_dtype) -> Tensor",
-    _int_mm_dequant_meta,
-    "Meta",
-)
