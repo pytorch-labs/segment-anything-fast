@@ -95,9 +95,7 @@ def matmul_kernel_with_block_pointers(
 
 import torch.utils.benchmark as benchmark
 def benchmark_torch_function_in_microseconds(f, *args, **kwargs):
-    f(*args, **kwargs)
     try:
-        f(*args, **kwargs)
         t0 = benchmark.Timer(
             stmt="f(*args, **kwargs)", globals={"args": args, "kwargs": kwargs, "f": f}
         )
@@ -109,7 +107,6 @@ def _autotune(configs, function):
     best = None
     best_config = None
     for i, config in enumerate(configs):
-        # import pdb; pdb.set_trace()
         t_config = benchmark_torch_function_in_microseconds(function, *config)
         if t_config is not None:
             if best is not None:
@@ -158,7 +155,7 @@ def _find_config(key_tensors, function):
     print(f"Could not find a config for key {key}")
     import itertools
     configs = []
-    for (BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps) in itertools.product([64, 128], [64, 128, 256], [32, 64], [8], [3, 4, 5], [2, 4, 8]):
+    for (BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps) in itertools.product([32, 64, 128, 256], [32, 64, 128, 256], [32, 64], [4, 8], [3, 4, 5], [2, 4, 8]):
         configs.append((BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps))
     print(f"Trying {len(configs)} configurations.")
     best, best_config = _autotune(configs, function)

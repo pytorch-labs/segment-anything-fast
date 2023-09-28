@@ -159,7 +159,7 @@ def run_traces(*args, **kwargs):
 
 print_header = True
 # for bs, model in itertools.product([1, 32], ["vit_b", "vit_l", "vit_h"]):
-for bs, model in itertools.product([32], ["vit_h"]):
+for bs, model in itertools.product([32], ["vit_b"]):
     # run_experiment("fp32",       "default",                     model, bs, 32, print_header=print_header)
     # print_header = False
     # run_experiment("bf16",       "codesign",                    model, bs, 32, use_half=True)
