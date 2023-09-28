@@ -47,19 +47,19 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
         else:
             ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va)
     if difference is not None and difference > 1:
-        difference = int((difference * 100) - 100)
+        difference_v = int((difference * 100) - 100)
         if up_good:
-            ax.text(x, value, f"+{difference}%", ha='center', va="bottom", color='green')
+            ax.text(x, value, f"+{difference_v}%", ha='center', va="bottom", color='green')
         else:
-            ax.text(x, value, f"+{difference}%", ha='center', va="bottom", color='red')
+            ax.text(x, value, f"+{difference_v}%", ha='center', va="bottom", color='red')
     if difference is not None and difference == 1:
         ax.text(x, value, f"+/-0%", ha='center', va="bottom", color='gray')
     if difference is not None and difference < 1:
-        difference = int((difference * 100) - 100)
+        difference_v = int((difference * 100) - 100)
         if up_good:
-            ax.text(x, value, f"{difference}%", ha='center', va="bottom", color='red')
+            ax.text(x, value, f"{difference_v}%", ha='center', va="bottom", color='red')
         else:
-            ax.text(x, value, f"{difference}%", ha='center', va="bottom", color='green')
+            ax.text(x, value, f"{difference_v}%", ha='center', va="bottom", color='green')
 
             
 
@@ -108,7 +108,7 @@ def run(up_to):
         df = mdf[mdf["batch_size"] == batch_size]
         make_row_chart(df, "img/s", *axs[0], f"Batch size {batch_size}", (0.0, 0.0), (100.0, 100.0), va, techniques, batch_size_idx, True,
                        "Images per second", data_format="{:.1f}")
-        make_row_chart(df, "memory(GiB)", *axs[1], f"Batch size {batch_size}", 0, 80, va, techniques, batch_size_idx, False,
+        make_row_chart(df, "memory(GiB)", *axs[1], f"Batch size {batch_size}", 0, 60, va, techniques, batch_size_idx, False,
                        title="Memory savings", data_format="{:.0f}")
     for ax in axs[1:]:
         ax[0].legend()
