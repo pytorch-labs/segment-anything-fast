@@ -89,23 +89,9 @@ def matmul_kernel_with_block_pointers(
     s1 = tl.load(s1_block_ptr, boundary_check=(0, 1))
     s2 = tl.load(s2_block_ptr, boundary_check=(0, 1))
     c = c * s1 * s2
-    c = c.to(tl.float16)
+    c = c.to(tl.bfloat16)
     # Epilogue
     tl.store(c_block_ptr, c, boundary_check=(0, 1))
-
-class MyIntMMLibrary:
-    lib = torch.library.Library("my_int_mm", "DEF")
-    ops_table = {}
-
-    @classmethod
-    def registerOp(cls, op_key, full_schema, op_impl, dispatch_key):
-        print("cls.ops_table: ", cls.ops_table)
-        if (op_key, dispatch_key) not in cls.ops_table:
-            if (op_key, "CUDA") not in cls.ops_table:
-                cls.lib.define(full_schema)
-            cls.lib.impl("my_int_mm::" + op_key, op_impl, dispatch_key)
-            cls.ops_table[(op_key, dispatch_key)] = op_impl
-        return cls.ops_table[(op_key, dispatch_key)]
 
 import torch.utils.benchmark as benchmark
 def benchmark_torch_function_in_microseconds(f, *args, **kwargs):
@@ -171,9 +157,20 @@ def _find_config(key_tensors, function):
     BEST_CONFIGS[key] = best_config
     return best_config, True
 
+lib = torch.library.Library("custom_int_mm", "FRAGMENT")
+lib.define("int_mm_dequant(Tensor a, Tensor b, Tensor scalar1, Tensor scalar2, ScalarType out_dtype) -> Tensor")
+
+# All that's needed for torch.compile support
+@torch.library.impl(lib, "int_mm_dequant", "Meta")
+def _int_mm_dequant_meta(a, b, scalar1, scalar2, out_dtype):
+    M, K = a.shape
+    K, N = b.shape
+    # Allocates output.
+    return torch.empty((M, N), device=a.device, dtype=torch.bfloat16)
 
 # We can now create a convenience wrapper function that only takes two input tensors,
 # and (1) checks any shape constraint; (2) allocates the output; (3) launches the above kernel.
+@torch.library.impl(lib, "int_mm_dequant", "CUDA")
 def _int_mm_dequant(a, b, scalar1, scalar2, out_dtype):
     # b = b.contiguous()
     # Check constraints.
@@ -183,12 +180,12 @@ def _int_mm_dequant(a, b, scalar1, scalar2, out_dtype):
     M, K = a.shape
     K, N = b.shape
     # Allocates output.
-    c = torch.empty((M, N), device=a.device, dtype=torch.float16)
+    c = torch.empty((M, N), device=a.device, dtype=torch.bfloat16)
     scalar1 = scalar1.expand_as(c)
     scalar2 = scalar2.expand_as(c)
     assert scalar1.dim() == 2
     assert scalar2.dim() == 2
-    assert out_dtype == torch.float16
+    assert out_dtype == torch.bfloat16
     # 1D launch kernel where each block gets its own program.
     grid = lambda META: (
         triton.cdiv(M, META['BLOCK_SIZE_M']) * triton.cdiv(N, META['BLOCK_SIZE_N']),
@@ -218,23 +215,3 @@ def _int_mm_dequant(a, b, scalar1, scalar2, out_dtype):
     partial_matmul_kernel(*best_config)
 
     return c
-
-def _int_mm_dequant_meta(a, b, scalar1, scalar2, out_dtype):
-    M, K = a.shape
-    K, N = b.shape
-    # Allocates output.
-    return torch.empty((M, N), device=a.device, dtype=torch.float16)
-
-MyIntMMLibrary.registerOp(
-    "int_mm",
-    "int_mm(Tensor a, Tensor b, Tensor scalar1, Tensor scalar2, ScalarType out_dtype) -> Tensor",
-    _int_mm_dequant,
-    "CUDA",
-)
-
-MyIntMMLibrary.registerOp(
-    "int_mm",
-    "int_mm(Tensor a, Tensor b, Tensor scalar1, Tensor scalar2, ScalarType out_dtype) -> Tensor",
-    _int_mm_dequant_meta,
-    "Meta",
-)

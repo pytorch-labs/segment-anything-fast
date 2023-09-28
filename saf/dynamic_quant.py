@@ -116,7 +116,7 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
                 # y = y.to(out_dtype)
 
                 # y = _int_mm_dequant(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, out_dtype)
-                y = torch.ops.my_int_mm.int_mm(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, out_dtype)
+                y = torch.ops.custom_int_mm.int_mm_dequant(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, out_dtype)
                 return y.reshape(*x_vals_int8.shape[:-1], -1)
 
             # like F.linear, but with int8 dynamic quantization of activation,

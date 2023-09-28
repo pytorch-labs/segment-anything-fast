@@ -241,13 +241,14 @@ def build_data(coco_img_ids,
         def cat_and_cast(b, use_half):
             b = torch.cat(b) if len(b) > 0 else None
             if use_half and b is not None:
-                return b.half()
+                return b.bfloat16()
             return b
 
         def to_nested_tensor(data, sizes=None, use_half=False):
             if len(data) == 0:
                 return None
-            dtype = torch.float16 if use_half else torch.float32
+            dtype = torch.bfloat16 if use_half else torch.float32
+
             if sizes is not None:
                 data = [d.view(s) for (d, s) in zip(data, sizes)]
 
