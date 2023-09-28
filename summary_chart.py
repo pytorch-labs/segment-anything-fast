@@ -81,8 +81,6 @@ def run(up_to):
                        "Images per second", data_format="{:.2f}")
         make_row_chart(df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000, va, techniques, batch_size_idx,
                        title="Memory savings", data_format="{:.0f}")
-        make_row_chart(df, "mIoU", *axs[2], f"Batch size {batch_size}", 0.0, 1.0, va, techniques, batch_size_idx,
-                       title="Accuracy", data_format="{:.2f}")
     for ax in axs:
         ax[0].legend()
         ax[1].legend()
