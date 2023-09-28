@@ -140,7 +140,7 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
                 predictor.reset_image()
                 predictor.original_size = image.shape[:2]
                 predictor.input_size = input_size
-                predictor.features = features
+                predictor.features_batch = features
                 predictor.is_image_set = True
                 coords = coords.unsqueeze(1)
                 # TODO: Should exclude this from the timed region as well?
