@@ -76,7 +76,7 @@ def run(up_to):
     print("keys: ", keys)
 
     mdf["memory(GiB)"] = mdf["memory(MiB)"] // 1024
-    mdf["img/s"] = pd.to_numeric(mdf["img_s(avg)"].round(), downcast="integer")
+    mdf["img/s"] = pd.to_numeric(mdf["img_s(avg)"].round(), downcast="integer") // 1
     
     fig, axs = plt.subplots(2, 2, figsize=(20, 20))
     
