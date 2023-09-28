@@ -66,10 +66,9 @@ print("techniques: ", techniques)
 
 fig, axs = plt.subplots(3, 2, figsize=(20, 20))
 
-for batch_size_idx, batch_size in enumerate([32, 1]):
+for batch_size_idx, (batch_size, hlim) in enumerate(zip([32, 1], [100, 25])):
     df = mdf[mdf["batch_size"] == batch_size]
-    
-    make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", 0.0, 100.0,
+    make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", 0.0, hlim,
                    "Images per second", data_format="{:.2f}")
     make_row_chart(df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000,
                    title="Memory savings", data_format="{:.0f}")
