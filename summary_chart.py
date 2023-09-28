@@ -74,12 +74,13 @@ def run(up_to):
     print("keys: ", keys)
 
     mdf["memory(GiB)"] = mdf["memory(MiB)"] // 1024
+    mdf["img/s"] = mdf["img_s(avg)"].round()
     
     fig, axs = plt.subplots(2, 2, figsize=(20, 20))
     
     for batch_size_idx, (batch_size, hlim, va) in enumerate(zip([32, 1], [100, 100], ["bottom", "bottom"])):
         df = mdf[mdf["batch_size"] == batch_size]
-        make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", (0.0, 0.0), (100.0, 25.0), va, techniques, batch_size_idx,
+        make_row_chart(df, "img/s", *axs[0], f"Batch size {batch_size}", (0.0, 0.0), (100.0, 25.0), va, techniques, batch_size_idx,
                        "Images per second", data_format="{:.2f}")
         make_row_chart(df, "memory(GiB)", *axs[1], f"Batch size {batch_size}", 0, 80, va, techniques, batch_size_idx,
                        title="Memory savings", data_format="{:.0f}")
