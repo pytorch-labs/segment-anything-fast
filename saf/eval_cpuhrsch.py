@@ -158,8 +158,7 @@ def run_traces(*args, **kwargs):
 # run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
 print_header = True
-# for bs, model in itertools.product([1, 32], ["vit_b", "vit_l", "vit_h"]):
-for bs, model in itertools.product([32], ["vit_b", "vit_h"]):
+for bs, model in itertools.product([1, 32], ["vit_b", "vit_l", "vit_h"]):
     run_experiment("fp32",       "default",                     model, bs, 32, print_header=print_header)
     print_header = False
     run_experiment("bf16",       "codesign",                    model, bs, 32, use_half=True)
