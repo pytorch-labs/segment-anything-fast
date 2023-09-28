@@ -23,7 +23,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     ax.bar(x_values, y_values, label=label, color=bar_colors)
 
     # Customize the chart labels and title
-    ax.set_xlabel(category_column, rotation=45)
+    ax.set_xlabel(category_column)
     ax.set_ylabel(value_column)
     ax.set_title(title)
     if ylim_low is None:
@@ -38,6 +38,8 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     # Add data labels or data points above the bars
     for x, value in zip(x_coords, df[value_column]):
         ax.text(x, value, data_format.format(value), ha='center', va=va)
+
+    ax.set_xticklabels(df[category_column], rotation = 45, ha="right")
 
 
 def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, techniques, batch_size_idx, title="", relative=False, data_format=None):
