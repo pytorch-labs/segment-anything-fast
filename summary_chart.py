@@ -36,7 +36,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
 
     # Add data labels or data points above the bars
     for x, value in zip(x_coords, df[value_column]):
-        ax.text(x, value, data_format.format(value), ha='center', va='bottom')
+        ax.text(x, value, data_format.format(value), ha='center', va='top')
 
 
 def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, title="", relative=False, data_format=None):
