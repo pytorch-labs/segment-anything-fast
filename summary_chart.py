@@ -62,14 +62,7 @@ matplotlib.rcParams.update({'font.size': 12})
 csv_file = "results.csv"
 mdf_ = pd.read_csv(csv_file)
 mdf = mdf_.dropna(subset=["batch_size"])
-techniques = {}
-tech_idx = 0
-for _, name in enumerate(list(mdf["technique"])):
-    if name in techniques:
-        pass
-    else:
-        techniques[name] = tech_idx
-        tech_idx += 1
+techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'int8': 6, 'sparse': 7}
 print("techniques: ", techniques)
 
 fig, axs = plt.subplots(3, 3, figsize=(20, 20))
