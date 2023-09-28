@@ -95,16 +95,13 @@ class MaskDecoder(nn.Module):
         if sparse_prompt_embeddings.is_nested:
             assert dense_prompt_embeddings.is_nested
             assert multimask_output
-            masks, iou_pred, offsets = self.predict_masks_nested(
+            masks, iou_pred = self.predict_masks_nested(
                 image_embeddings=image_embeddings,
                 image_pe=image_pe,
                 sparse_prompt_embeddings=sparse_prompt_embeddings,
                 dense_prompt_embeddings=dense_prompt_embeddings,
             )
-            offsets = offsets.tolist()
-            result = [(masks[offsets[i]:offsets[i+1]], iou_pred[offsets[i]:offsets[i+1]]) for i in range(sparse_prompt_embeddings.size(0))]
-            masks, iou_pred = zip(*result, strict=True)
-            return torch.nested.nested_tensor(list(masks)), torch.nested.nested_tensor(list(iou_pred))
+            return masks, iou_pred
         else:
             masks, iou_pred = self.predict_masks(
                 image_embeddings=image_embeddings,
@@ -175,27 +172,21 @@ class MaskDecoder(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Predicts masks. See 'forward' for more details."""
         # Concatenate output tokens
-        output_tokens = torch.cat([self.iou_token.weight, self.mask_tokens.weight], dim=0)
-        tokens = torch.nested.nested_tensor(
-            [torch.cat([output_tokens.expand(t.shape[0], -1, -1), t], dim=1)
-             for t in sparse_prompt_embeddings.unbind()])
+        output_tokens = (
+            torch.zeros_like(sparse_prompt_embeddings).prod(dim=2, keepdim=True) +
+            torch.cat([self.iou_token.weight, self.mask_tokens.weight], dim=0))
+        tokens = torch.cat([output_tokens, sparse_prompt_embeddings], dim=2)
 
-        offsets = torch.cat([torch.zeros(1, dtype=torch.int64),
-                             tokens._nested_tensor_size()[:, 0].cumsum(dim=0)])
+        # TODO: remove this and make sure offsets are propagated
+        offsets = tokens.offsets()
 
-        srcs = []
-        token_inputs = []
-        for image_embedding, dense_prompt_embedding, token in \
-                zip(image_embeddings, dense_prompt_embeddings, tokens):
-            srcs.append(image_embedding + dense_prompt_embedding)
-            token_inputs.append(token)
-        src = torch.cat(srcs, dim=0)
-        pos_src = torch.repeat_interleave(image_pe, src.size(0), dim=0)
-        tokens = torch.cat(token_inputs, dim=0)
-        b, c, h, w = src.shape
+        src = dense_prompt_embeddings + image_embeddings.unsqueeze(1)
+        pos_src = torch.zeros_like(src) + image_pe
+        b, c, h, w = src.values().shape
 
         # Run the transformer
-        hs, src = self.transformer(src, pos_src, tokens)
+        # TODO: Run the full NTs through instead of just the buffers
+        hs, src = self.transformer(src.values(), pos_src.values(), tokens.values())
         iou_token_out = hs[:, 0, :]
         mask_tokens_out = hs[:, 1 : (1 + self.num_mask_tokens), :]
 
@@ -212,7 +203,12 @@ class MaskDecoder(nn.Module):
         # Generate mask quality predictions
         iou_pred = self.iou_prediction_head(iou_token_out)
 
-        return masks, iou_pred, offsets
+        # TODO: No need to create NT by hand once we propagate it properly through Transformer
+        from torch.nested._internal.nested_tensor import NestedTensor
+        num_tensors = offsets.shape[0] - 1
+        masks_nt = NestedTensor(masks, offsets)
+        iou_pred_nt = NestedTensor(iou_pred, offsets)
+        return masks_nt, iou_pred_nt
 
 
 # Lightly adapted from
