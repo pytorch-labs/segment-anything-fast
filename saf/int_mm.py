@@ -93,20 +93,6 @@ def matmul_kernel_with_block_pointers(
     # Epilogue
     tl.store(c_block_ptr, c, boundary_check=(0, 1))
 
-class MyIntMMLibrary:
-    lib = torch.library.Library("my_int_mm", "DEF")
-    ops_table = {}
-
-    @classmethod
-    def registerOp(cls, op_key, full_schema, op_impl, dispatch_key):
-        print("cls.ops_table: ", cls.ops_table)
-        if (op_key, dispatch_key) not in cls.ops_table:
-            if (op_key, "CUDA") not in cls.ops_table:
-                cls.lib.define(full_schema)
-            cls.lib.impl("my_int_mm::" + op_key, op_impl, dispatch_key)
-            cls.ops_table[(op_key, dispatch_key)] = op_impl
-        return cls.ops_table[(op_key, dispatch_key)]
-
 import torch.utils.benchmark as benchmark
 def benchmark_torch_function_in_microseconds(f, *args, **kwargs):
     f(*args, **kwargs)
