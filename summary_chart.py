@@ -69,17 +69,12 @@ fig, axs = plt.subplots(3, 2, figsize=(20, 20))
 for batch_size_idx, batch_size in enumerate([32, 1]):
     df = mdf[mdf["batch_size"] == batch_size]
     
-    # print(df)
-    # print(df.columns)
-    
-    if batch_size in [1, 32]:
-        make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", 0.0, 100.0,
-                       "Images per second", data_format="{:.2f}")
+    make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", 0.0, 100.0,
+                   "Images per second", data_format="{:.2f}")
     make_row_chart(df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000,
                    title="Memory savings", data_format="{:.0f}")
-    if batch_size in [1]:
-        make_row_chart(df, "mIoU", *axs[2], f"Batch size {batch_size}", 0.0, 1.0,
-                       title="Accuracy", data_format="{:.2f}")
+    make_row_chart(df, "mIoU", *axs[2], f"Batch size {batch_size}", 0.0, 1.0,
+                   title="Accuracy", data_format="{:.2f}")
 for ax in axs:
     ax[0].legend()
     ax[1].legend()
