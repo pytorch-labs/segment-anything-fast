@@ -23,7 +23,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     ax.bar(x_values, y_values, label=label, color=bar_colors)
 
     # Customize the chart labels and title
-    ax.set_xlabel(category_column)
+    ax.set_xlabel(category_column, rotation=45)
     ax.set_ylabel(value_column)
     ax.set_title(title)
     if ylim_low is None:
