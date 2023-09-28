@@ -62,7 +62,7 @@ def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, t
     helper("vit_h", ax2, ylim_low[1], ylim_high[1], va)
 
 def run(up_to):
-    matplotlib.rcParams.update({'font.size': 12})
+    matplotlib.rcParams.update({'font.size': 24})
     
     csv_file = "results.csv"
     mdf_ = pd.read_csv(csv_file)
