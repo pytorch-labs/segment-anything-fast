@@ -72,7 +72,6 @@ def run(up_to):
     keys = [k for (k, v) in sorted(techniques.items(), key=lambda kv: kv[1])]
     mdf = pd.concat([mdf[mdf["technique"] == keys[i]] for i in range(up_to)])
     print("keys: ", keys)
-    import pdb; pdb.set_trace()
     
     fig, axs = plt.subplots(3, 2, figsize=(20, 20))
     
