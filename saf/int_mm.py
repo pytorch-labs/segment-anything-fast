@@ -49,7 +49,7 @@ def matmul_kernel_with_block_pointers(
                                     order=(1, 0))
     b_block_ptr = tl.make_block_ptr(base=b_ptr, shape=(K, N), strides=(stride_bk, stride_bn),
                                     offsets=(0, pid_n * BLOCK_SIZE_N), block_shape=(BLOCK_SIZE_K, BLOCK_SIZE_N),
-                                    order=(0, 1))
+                                    order=(1, 0))
 
     # -----------------------------------------------------------
     # Iterate to compute a block of the C matrix.
@@ -63,8 +63,8 @@ def matmul_kernel_with_block_pointers(
         # check, if you can guarantee that the access is always in-bound in
         # that axis.
         # See above `Load/Store a Block Pointer` section for details.
-        a = tl.load(a_block_ptr, boundary_check=(0, 1))
-        b = tl.load(b_block_ptr, boundary_check=(0, 1))
+        a = tl.load(a_block_ptr) #, boundary_check=(0, 1))
+        b = tl.load(b_block_ptr) #, boundary_check=(0, 1))
         # We accumulate along the K dimension.
         accumulator += tl.dot(a, b)
         # Advance the block pointer to the next K block.
@@ -86,12 +86,13 @@ def matmul_kernel_with_block_pointers(
     s2_block_ptr = tl.make_block_ptr(base=s2_ptr, shape=(M, N), strides=(stride_s2m, stride_s2n),
                                      offsets=(pid_m * BLOCK_SIZE_M, pid_n * BLOCK_SIZE_N),
                                      block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_N), order=(1, 0))
-    s1 = tl.load(s1_block_ptr, boundary_check=(0, 1))
-    s2 = tl.load(s2_block_ptr, boundary_check=(0, 1))
-    c = c * s1 * s2
+    s1 = tl.load(s1_block_ptr) #, boundary_check=(0, 1))
+    c = c * s1
+    s2 = tl.load(s2_block_ptr) #, boundary_check=(0, 1))
+    c = c * s2
     c = c.to(tl.bfloat16)
     # Epilogue
-    tl.store(c_block_ptr, c, boundary_check=(0, 1))
+    tl.store(c_block_ptr, c) #, boundary_check=(0, 1))
 
 import torch.utils.benchmark as benchmark
 def benchmark_torch_function_in_microseconds(f, *args, **kwargs):
@@ -101,7 +102,7 @@ def benchmark_torch_function_in_microseconds(f, *args, **kwargs):
         )
     except:
         return None
-    return t0.blocked_autorange().mean * 1e6
+    return t0.timeit(number=10).mean * 1e6
 
 def _autotune(configs, function):
     best = None
