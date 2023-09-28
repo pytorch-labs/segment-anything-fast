@@ -63,8 +63,8 @@ def matmul_kernel_with_block_pointers(
         # check, if you can guarantee that the access is always in-bound in
         # that axis.
         # See above `Load/Store a Block Pointer` section for details.
-        a = tl.load(a_block_ptr, boundary_check=(0, 1))
-        b = tl.load(b_block_ptr, boundary_check=(0, 1))
+        a = tl.load(a_block_ptr) #, boundary_check=(0, 1))
+        b = tl.load(b_block_ptr) #, boundary_check=(0, 1))
         # We accumulate along the K dimension.
         accumulator += tl.dot(a, b)
         # Advance the block pointer to the next K block.
@@ -86,30 +86,28 @@ def matmul_kernel_with_block_pointers(
     s2_block_ptr = tl.make_block_ptr(base=s2_ptr, shape=(M, N), strides=(stride_s2m, stride_s2n),
                                      offsets=(pid_m * BLOCK_SIZE_M, pid_n * BLOCK_SIZE_N),
                                      block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_N), order=(1, 0))
-    s1 = tl.load(s1_block_ptr, boundary_check=(0, 1))
-    s2 = tl.load(s2_block_ptr, boundary_check=(0, 1))
-    c = c * s1 * s2
+    s1 = tl.load(s1_block_ptr) #, boundary_check=(0, 1))
+    c = c * s1
+    s2 = tl.load(s2_block_ptr) #, boundary_check=(0, 1))
+    c = c * s2
     c = c.to(tl.bfloat16)
     # Epilogue
-    tl.store(c_block_ptr, c, boundary_check=(0, 1))
+    tl.store(c_block_ptr, c) #, boundary_check=(0, 1))
 
 import torch.utils.benchmark as benchmark
 def benchmark_torch_function_in_microseconds(f, *args, **kwargs):
-    f(*args, **kwargs)
     try:
-        f(*args, **kwargs)
         t0 = benchmark.Timer(
             stmt="f(*args, **kwargs)", globals={"args": args, "kwargs": kwargs, "f": f}
         )
     except:
         return None
-    return t0.blocked_autorange().mean * 1e6
+    return t0.timeit(number=10).mean * 1e6
 
 def _autotune(configs, function):
     best = None
     best_config = None
     for i, config in enumerate(configs):
-        # import pdb; pdb.set_trace()
         t_config = benchmark_torch_function_in_microseconds(function, *config)
         if t_config is not None:
             if best is not None:
@@ -122,27 +120,36 @@ def _autotune(configs, function):
         print(f"i: {i+1}/{len(configs)} ", str(config), " :", str(t_config))
     return best, best_config
 
+def _load_best_configs():
+    from pathlib import Path
+    saved_configs = Path("int_mm_configs_a100.p")
+    if saved_configs.is_file():
+        import pickle
+        with open(saved_configs, 'rb') as f:
+            print(f"Loading best configs from file {saved_configs}")
+            return pickle.load(f)
 
-# Built on an A100 80GB
-BEST_CONFIGS = {}
+def _save_best_configs(best_configs):
+    from pathlib import Path
+    saved_configs = Path("int_mm_configs_a100.p")
+    with open(saved_configs, 'wb') as f:
+        import pickle
+        print(f"Saving best configs to file {saved_configs}")
+        pickle.dump(best_configs, f)
 
-BEST_CONFIGS[(torch.Size([98000, 768]), (768, 1), torch.Size([768, 2304]), (1, 768), torch.Size([98000, 2304]), (2304, 1), torch.Size([98000, 2304]), (1, 0), torch.Size([98000, 2304]), (0, 1))] = (64, 256, 64, 8, 4, 4)
-BEST_CONFIGS[(torch.Size([98000, 768]), (768, 1), torch.Size([768, 768]), (1, 768), torch.Size([98000, 768]), (768, 1), torch.Size([98000, 768]), (1, 0), torch.Size([98000, 768]), (0, 1))] = (128, 128, 64, 8, 5, 4)
-BEST_CONFIGS[(torch.Size([81920, 768]), (768, 1), torch.Size([768, 3072]), (1, 768), torch.Size([81920, 3072]), (3072, 1), torch.Size([81920, 3072]), (1, 0), torch.Size([81920, 3072]), (0, 1))] = (64, 256, 64, 8, 4, 4)
-BEST_CONFIGS[(torch.Size([81920, 3072]), (3072, 1), torch.Size([3072, 768]), (1, 3072), torch.Size([81920, 768]), (768, 1), torch.Size([81920, 768]), (1, 0), torch.Size([81920, 768]), (0, 1))] = (128, 128, 64, 8, 4, 4)
-BEST_CONFIGS[(torch.Size([81920, 768]), (768, 1), torch.Size([768, 2304]), (1, 768), torch.Size([81920, 2304]), (2304, 1), torch.Size([81920, 2304]), (1, 0), torch.Size([81920, 2304]), (0, 1))] = (128, 128, 64, 8, 5, 4)
-BEST_CONFIGS[(torch.Size([81920, 768]), (768, 1), torch.Size([768, 768]), (1, 768), torch.Size([81920, 768]), (768, 1), torch.Size([81920, 768]), (1, 0), torch.Size([81920, 768]), (0, 1))] = (64, 256, 64, 8, 4, 4)
-
-BEST_CONFIGS[(torch.Size([98000, 1280]), (1280, 1), torch.Size([1280, 3840]), (1, 1280), torch.Size([98000, 3840]), (3840, 1), torch.Size([98000, 3840]), (1, 0), torch.Size([98000, 3840]), (0, 1))] = (64, 256, 64, 8, 4, 4)
-BEST_CONFIGS[(torch.Size([98000, 1280]), (1280, 1), torch.Size([1280, 1280]), (1, 1280), torch.Size([98000, 1280]), (1280, 1), torch.Size([98000, 1280]), (1, 0), torch.Size([98000, 1280]), (0, 1))] = (128, 128, 64, 8, 4, 4)
-BEST_CONFIGS[(torch.Size([81920, 1280]), (1280, 1), torch.Size([1280, 5120]), (1, 1280), torch.Size([81920, 5120]), (5120, 1), torch.Size([81920, 5120]), (1, 0), torch.Size([81920, 5120]), (0, 1))] = (64, 256, 64, 8, 4, 4)
-BEST_CONFIGS[(torch.Size([81920, 5120]), (5120, 1), torch.Size([5120, 1280]), (1, 5120), torch.Size([81920, 1280]), (1280, 1), torch.Size([81920, 1280]), (1, 0), torch.Size([81920, 1280]), (0, 1))] = (128, 128, 64, 8, 4, 4)
-BEST_CONFIGS[(torch.Size([81920, 1280]), (1280, 1), torch.Size([1280, 3840]), (1, 1280), torch.Size([81920, 3840]), (3840, 1), torch.Size([81920, 3840]), (1, 0), torch.Size([81920, 3840]), (0, 1))] = (64, 256, 64, 8, 4, 4)
-BEST_CONFIGS[(torch.Size([81920, 1280]), (1280, 1), torch.Size([1280, 1280]), (1, 1280), torch.Size([81920, 1280]), (1280, 1), torch.Size([81920, 1280]), (1, 0), torch.Size([81920, 1280]), (0, 1))] = (128, 128, 64, 8, 4, 4)
-
-def _find_config(key_tensors, function):
+def _create_best_configs_key(key_tensors):
     key = sum([[k.size(), k.stride()] for k in key_tensors], [])
     key = tuple(key)
+    return key
+
+# Built on an A100 80GB
+BEST_CONFIGS = None
+
+def _find_config(key_tensors, function):
+    global BEST_CONFIGS
+    if BEST_CONFIGS is None:
+        BEST_CONFIGS = _load_best_configs()
+    key = _create_best_configs_key(key_tensors)
     if key in BEST_CONFIGS:
         return BEST_CONFIGS[key], False
 
@@ -155,6 +162,7 @@ def _find_config(key_tensors, function):
     best, best_config = _autotune(configs, function)
     print("Found best_config ", best_config, " with time ", best, " for key ", key)
     BEST_CONFIGS[key] = best_config
+    _save_best_configs(BEST_CONFIGS)
     return best_config, True
 
 lib = torch.library.Library("custom_int_mm", "FRAGMENT")
@@ -168,6 +176,7 @@ def _int_mm_dequant_meta(a, b, scalar1, scalar2, out_dtype):
     # Allocates output.
     return torch.empty((M, N), device=a.device, dtype=torch.bfloat16)
 
+
 # We can now create a convenience wrapper function that only takes two input tensors,
 # and (1) checks any shape constraint; (2) allocates the output; (3) launches the above kernel.
 @torch.library.impl(lib, "int_mm_dequant", "CUDA")
@@ -176,7 +185,7 @@ def _int_mm_dequant(a, b, scalar1, scalar2, out_dtype):
     # Check constraints.
     assert a.shape[1] == b.shape[0], "Incompatible dimensions"
     assert a.is_contiguous(), "Matrix A must be contiguous"
-    # assert b.is_contiguous(), "Matrix B must be contiguous"
+    assert b.transpose(0, 1).is_contiguous(), "Matrix B must be transpose contiguous"
     M, K = a.shape
     K, N = b.shape
     # Allocates output.
