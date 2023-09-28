@@ -156,7 +156,7 @@ def _find_config(key_tensors, function):
     print(f"Could not find a config for key {key}")
     import itertools
     configs = []
-    for (BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps) in itertools.product([32, 64, 128, 256], [32, 64, 128, 256], [32, 64], [4, 8], [3, 4, 5], [2, 4, 8]):
+    for (BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps) in itertools.product([64, 128], [64, 128, 256], [32, 64], [8], [3, 4, 5], [2, 4, 8]):
         configs.append((BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps))
     print(f"Trying {len(configs)} configurations.")
     best, best_config = _autotune(configs, function)
