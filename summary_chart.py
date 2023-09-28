@@ -39,7 +39,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     for x, value in zip(x_coords, df[value_column]):
         ax.text(x, value, data_format.format(value), ha='center', va=va)
 
-    ax.set_xticklabels(ax.get_xticklabels(), rotation = 0, ha="right")
+    ax.set_xticklabels(ax.get_xticklabels(), rotation = 15, ha="right")
 
 
 def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, techniques, batch_size_idx, title="", relative=False, data_format=None):
@@ -64,7 +64,7 @@ def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, t
     helper("vit_h", ax2, ylim_low[1], ylim_high[1], va)
 
 def run(up_to):
-    matplotlib.rcParams.update({'font.size': 36})
+    matplotlib.rcParams.update({'font.size': 48})
     
     csv_file = "results.csv"
     mdf_ = pd.read_csv(csv_file)
