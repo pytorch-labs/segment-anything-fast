@@ -78,7 +78,7 @@ def run(up_to):
     mdf["memory(GiB)"] = mdf["memory(MiB)"] // 1024
     mdf["img/s"] = mdf["img_s(avg)"].round(decimals=1)
     
-    fig, axs = plt.subplots(2, 2, figsize=(40, 20))
+    fig, axs = plt.subplots(2, 2, figsize=(40, 18))
     
     for batch_size_idx, (batch_size, hlim, va) in enumerate(zip([32, 1], [100, 100], ["bottom", "bottom"])):
         df = mdf[mdf["batch_size"] == batch_size]
