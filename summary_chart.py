@@ -37,7 +37,10 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
 
     # Add data labels or data points above the bars
     for x, value in zip(x_coords, df[value_column]):
-        ax.text(x, value, data_format.format(value), ha='center', va=va)
+        if va == "top":
+            ax.text(x, value, data_format.format(value), ha='center', va=va, color='white')
+        else:
+            ax.text(x, value, data_format.format(value), ha='center', va=va)
 
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 15, ha="right")
 
