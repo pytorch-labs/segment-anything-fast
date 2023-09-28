@@ -80,7 +80,7 @@ def run(up_to):
     
     fig, axs = plt.subplots(2, 2, figsize=(40, 18))
     
-    for batch_size_idx, (batch_size, hlim, va) in enumerate(zip([32, 1], [100, 100], ["bottom", "bottom"])):
+    for batch_size_idx, (batch_size, hlim, va) in enumerate(zip([32, 1], [100, 100], ["top", "bottom"])):
         df = mdf[mdf["batch_size"] == batch_size]
         make_row_chart(df, "img/s", *axs[0], f"Batch size {batch_size}", (0.0, 0.0), (100.0, 100.0), va, techniques, batch_size_idx,
                        "Images per second", data_format="{:.1f}")
