@@ -39,7 +39,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
         ax.text(x, value, data_format.format(value), ha='center', va='bottom')
 
 
-def make_row_chart(df, value_column, ax1, ax2, ax3, label, ylim_low=None, ylim_high=None, title="", relative=False, data_format=None):
+def make_row_chart(df, value_column, ax1, ax2, label, ylim_low=None, ylim_high=None, title="", relative=False, data_format=None):
     category_column = "technique"
 
     def helper(sam_model_type, ax1):
@@ -54,8 +54,7 @@ def make_row_chart(df, value_column, ax1, ax2, ax3, label, ylim_low=None, ylim_h
         make_sub_chart(vit_b_df, ax1, f"{title} for {sam_model_type}",
                        category_column, value_column, ylim_low, ylim_high, data_format, label)
     helper("vit_b", ax1)
-    helper("vit_l", ax2)
-    helper("vit_h", ax3)
+    helper("vit_h", ax2)
 
 matplotlib.rcParams.update({'font.size': 12})
 
@@ -65,7 +64,7 @@ mdf = mdf_.dropna(subset=["batch_size"])
 techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'int8': 6, 'sparse': 7}
 print("techniques: ", techniques)
 
-fig, axs = plt.subplots(3, 3, figsize=(20, 20))
+fig, axs = plt.subplots(3, 2, figsize=(20, 20))
 
 for batch_size_idx, batch_size in enumerate([32, 1]):
     df = mdf[mdf["batch_size"] == batch_size]
@@ -78,13 +77,12 @@ for batch_size_idx, batch_size in enumerate([32, 1]):
                        "Images per second", data_format="{:.2f}")
     make_row_chart(df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000,
                    title="Memory savings", data_format="{:.0f}")
-    if batch_size in [32]:
+    if batch_size in [1]:
         make_row_chart(df, "mIoU", *axs[2], f"Batch size {batch_size}", 0.0, 1.0,
                        title="Accuracy", data_format="{:.2f}")
 for ax in axs:
     ax[0].legend()
     ax[1].legend()
-    ax[2].legend()
 # plt.tick_params(axis='both', which='both', length=10)
 plt.tight_layout()
 
