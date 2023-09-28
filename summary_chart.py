@@ -86,7 +86,7 @@ def run(up_to):
                        "Images per second", data_format="{:.1f}")
         make_row_chart(df, "memory(GiB)", *axs[1], f"Batch size {batch_size}", 0, 80, va, techniques, batch_size_idx,
                        title="Memory savings", data_format="{:.0f}")
-    for ax in axs:
+    for ax in axs[1:]:
         ax[0].legend()
         ax[1].legend()
     # plt.tick_params(axis='both', which='both', length=10)
