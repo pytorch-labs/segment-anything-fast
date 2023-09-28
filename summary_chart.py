@@ -35,12 +35,21 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     for tick in tick_positions:
         ax.axhline(y=tick, color='gray', linestyle='--', alpha=0.7)
 
+    last_value = None
+    difference = None
     # Add data labels or data points above the bars
-    for x, value in zip(x_coords, df[value_column]):
+    for i, (x, value) in enumerate(zip(x_coords, df[value_column])):
+        if i > 0:
+            difference = value / last_value
+        last_value = value
         if va == "top":
             ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va, color='white')
         else:
             ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va)
+    if difference is not None:
+        ax.text(x, value, difference, ha='center', va="bottom", color='green')
+
+            
 
     ax.set_xticklabels(ax.get_xticklabels(), rotation = 15, ha="right")
 
