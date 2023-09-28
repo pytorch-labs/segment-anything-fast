@@ -47,7 +47,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
         else:
             ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va)
     if difference is not None and difference > 1:
-        difference_v = int((difference * 100) - 100)
+        difference_v = int((difference * 1000) - 1000) / 10.0
         if up_good:
             ax.text(x, value, f"+{difference_v}%", ha='center', va="bottom", color='green')
         else:
@@ -55,7 +55,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     if difference is not None and difference == 1:
         ax.text(x, value, f"+/-0%", ha='center', va="bottom", color='gray')
     if difference is not None and difference < 1:
-        difference_v = int((difference * 100) - 100)
+        difference_v = int((difference * 1000) - 1000) / 10.0
         if up_good:
             ax.text(x, value, f"{difference_v}%", ha='center', va="bottom", color='red')
         else:
