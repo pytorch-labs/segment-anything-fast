@@ -52,6 +52,8 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
             ax.text(x, value, f"+{difference}%", ha='center', va="bottom", color='green')
         else:
             ax.text(x, value, f"+{difference}%", ha='center', va="bottom", color='red')
+    if difference is not None and difference == 1:
+        ax.text(x, value, f"+/-0%", ha='center', va="bottom", color='gray')
     if difference is not None and difference < 1:
         difference = int((difference * 100) - 100)
         if up_good:
