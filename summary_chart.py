@@ -72,14 +72,16 @@ def run(up_to):
     keys = [k for (k, v) in sorted(techniques.items(), key=lambda kv: kv[1])]
     mdf = pd.concat([mdf[mdf["technique"] == keys[i]] for i in range(up_to)])
     print("keys: ", keys)
+
+    mdf["memory(GiB)"] = mdf["memory(MiB)"] // 1024
     
     fig, axs = plt.subplots(2, 2, figsize=(20, 20))
     
-    for batch_size_idx, (batch_size, hlim, va) in enumerate(zip([32, 1], [100, 100], ["bottom", "top"])):
+    for batch_size_idx, (batch_size, hlim, va) in enumerate(zip([32, 1], [100, 100], ["top", "top"])):
         df = mdf[mdf["batch_size"] == batch_size]
         make_row_chart(df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", (0.0, 0.0), (100.0, 25.0), va, techniques, batch_size_idx,
                        "Images per second", data_format="{:.2f}")
-        make_row_chart(df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000, va, techniques, batch_size_idx,
+        make_row_chart(df, "memory(GiB)", *axs[1], f"Batch size {batch_size}", 0, 80, va, techniques, batch_size_idx,
                        title="Memory savings", data_format="{:.0f}")
     for ax in axs:
         ax[0].legend()
