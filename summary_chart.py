@@ -73,7 +73,7 @@ def run(up_to):
     mdf = pd.concat([mdf[mdf["technique"] == keys[i]] for i in range(up_to)])
     print("keys: ", keys)
     
-    fig, axs = plt.subplots(3, 2, figsize=(20, 20))
+    fig, axs = plt.subplots(2, 2, figsize=(20, 20))
     
     for batch_size_idx, (batch_size, hlim, va) in enumerate(zip([32, 1], [100, 100], ["bottom", "top"])):
         df = mdf[mdf["batch_size"] == batch_size]
