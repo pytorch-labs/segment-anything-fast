@@ -159,11 +159,11 @@ def run_traces(*args, **kwargs):
 
 print_header = True
 for bs, model in itertools.product([1, 32], ["vit_b", "vit_h"]):
-    run_experiment("fp32",       "default",                     model, bs, 32, print_header=print_header)
-    print_header = False
-    run_experiment("bf16",       "codesign",                    model, bs, 32, use_half=True)
-    run_experiment("compile",    "codesign",                    model, bs, 32, use_half=True,  use_compile="max-autotune")
-    run_experiment("SDPA",       "sdpa-decoder",                model, bs, 32, use_half=True,  use_compile="max-autotune")
+    # run_experiment("fp32",       "default",                     model, bs, 32, print_header=print_header, capture_output=False)
+    # print_header = False
+    # run_experiment("bf16",       "codesign",                    model, bs, 32, use_half=True)
+    # run_experiment("compile",    "codesign",                    model, bs, 32, use_half=True,  use_compile="max-autotune")
+    # run_experiment("SDPA",       "sdpa-decoder",                model, bs, 32, use_half=True,  use_compile="max-autotune")
     run_experiment("Triton",     "local-fork",                  model, bs, 32, use_half=True,  use_compile="max-autotune")
     if bs > 1:
         run_experiment("NT",     "local-fork",                  model, bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1))
