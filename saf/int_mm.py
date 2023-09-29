@@ -109,7 +109,7 @@ def _autotune(configs, function):
         t_config = benchmark_torch_function_in_microseconds(function, 1, *config)
         if t_config is not None:
             if best is not None:
-                if t_config < best:
+                if t_config < best * 2:
                     t_config = benchmark_torch_function_in_microseconds(function, 10, *config)
                 if t_config < best:
                     best = t_config
@@ -151,6 +151,8 @@ def _find_config(key_tensors, function):
     global BEST_CONFIGS
     if BEST_CONFIGS is None:
         BEST_CONFIGS = _load_best_configs()
+    if BEST_CONFIGS is None:
+        BEST_CONFIGS = {}
     key = _create_best_configs_key(key_tensors)
     if key in BEST_CONFIGS:
         return BEST_CONFIGS[key], False
@@ -158,7 +160,8 @@ def _find_config(key_tensors, function):
     print(f"Could not find a config for key {key}")
     import itertools
     # (BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps)
-    configs = list(itertools.product([32, 64, 128], [32, 64, 128, 256], [32, 64], [4, 8], [3, 4, 5], [2, 4, 8]))
+    configs = itertools.product([32, 64, 128, 256], [32, 64, 128, 256], [32, 64], [4, 8], [3, 4, 5], [2, 4, 8])
+    configs = list(filter(lambda x: not(x[0] == 256 and x[1] == 256), configs))
     print(f"Trying {len(configs)} configurations.")
     best, best_config = _autotune(configs, function)
     print("Found best_config ", best_config, " with time ", best, " for key ", key)
