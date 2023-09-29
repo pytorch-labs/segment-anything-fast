@@ -226,7 +226,5 @@ def _int_mm_dequant(a, b, scalar1, scalar2, out_dtype):
 
     best_config, first_time = _find_config([a, b, c, scalar1, scalar2], partial_matmul_kernel)
     partial_matmul_kernel(*best_config)
-    # print("best_config: ", best_config, " with time: ", first_time)
-    # print(" and speedup ", benchmark_torch_function_in_microseconds(torch.mm, 10, a.bfloat16(), b.bfloat16()) / benchmark_torch_function_in_microseconds(partial_matmul_kernel, 10, *best_config))
 
     return c
