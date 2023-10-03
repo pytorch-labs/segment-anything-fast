@@ -112,7 +112,7 @@ def run(up_to):
     for batch_size_idx, (batch_size, hlim, va) in enumerate(zip([32, 1], [100, 100], ["top", "bottom"])):
         df = mdf[mdf["batch_size"] == batch_size]
         make_row_chart(df, "img/s", *axs[0], f"Batch size {batch_size}", (0.0, 0.0), (100.0, 100.0), va, techniques, batch_size_idx, True, up_to,
-                       "Images per second", data_format="{:.1f}")
+                       "Images per second", data_format="{:.0f}")
         make_row_chart(df, "memory(GiB)", *axs[1], f"Batch size {batch_size}", 0, 60, va, techniques, batch_size_idx, False, up_to,
                        title="Memory savings", data_format="{:.0f}")
     for ax in axs[1:]:
