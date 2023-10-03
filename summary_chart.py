@@ -68,7 +68,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     tlabels[4] = matplotlib.text.Text(4, 0, 'T')
     tlabels[-1] = matplotlib.text.Text(7, 0, '2:4')
     tlabels = tlabels[:up_to] + list(map(lambda x: "", tlabels[up_to:]))
-    ax.set_xticklabels(tlabels, rotation = 0, ha="right")
+    ax.set_xticklabels(tlabels, rotation = 0, ha="center")
 
 
 def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, techniques, batch_size_idx, up_good, up_to, title="", relative=False, data_format=None):
@@ -105,7 +105,7 @@ def run(up_to):
     print("keys: ", keys)
 
     mdf["memory(GiB)"] = mdf["memory(MiB)"] // 1024
-    mdf["img/s"] = mdf["img_s(avg)"].round(decimals=1)
+    mdf["img/s"] = mdf["img_s(avg)"].round(decimals=0) // 1
     
     fig, axs = plt.subplots(2, 2, figsize=(40, 18))
     
