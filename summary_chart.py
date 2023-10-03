@@ -98,7 +98,7 @@ def run(up_to):
     mdf_ = pd.read_csv(csv_file)
     mdf = mdf_.dropna(subset=["batch_size"])
     techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'int8': 6}
-    if up_to == 7:
+    if up_to == 8:
         techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'sparse': 6}
     keys = [k for (k, v) in sorted(techniques.items(), key=lambda kv: kv[1])]
     if up_to == 8:
