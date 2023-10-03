@@ -64,9 +64,9 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
             
 
     tlabels = ax.get_xticklabels()
-    tlabels[-1] = matplotlib.text.Text(7, 0, 'bf 16sparse')
+    tlabels[-1] = matplotlib.text.Text(7, 0, 'bf16 sparse')
     tlabels = tlabels[:up_to] + list(map(lambda x: "", tlabels[up_to:]))
-    ax.set_xticklabels(tlabels, rotation = 15, ha="right")
+    ax.set_xticklabels(tlabels, rotation = 25, ha="right")
 
 
 def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, techniques, batch_size_idx, up_good, up_to, title="", relative=False, data_format=None):
