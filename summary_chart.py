@@ -64,8 +64,8 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
             
 
     tlabels = ax.get_xticklabels()
-    tlabels[2] = matplotlib.text.Text(2, 0, 'TC')
-    tlabels[4] = matplotlib.text.Text(4, 0, 'T')
+    tlabels[2] = matplotlib.text.Text(2, 0, 'compile')
+    tlabels[4] = matplotlib.text.Text(4, 0, 'Triton')
     if up_to == 8:
         tlabels[-1] = matplotlib.text.Text(6, 0, '2:4')
     tlabels = tlabels[:up_to] + list(map(lambda x: "", tlabels[up_to:]))
@@ -103,7 +103,9 @@ def run(up_to):
     if up_to == 8:
         techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'sparse': 6}
     keys = [k for (k, v) in sorted(techniques.items(), key=lambda kv: kv[1])]
+    actually_is_8 = False
     if up_to == 8:
+        actually_is_8 = True
         up_to = 7
     mdf = pd.concat([mdf[mdf["technique"] == keys[i]] for i in range(up_to)])
     print("keys: ", keys)
@@ -125,7 +127,11 @@ def run(up_to):
     # plt.tick_params(axis='both', which='both', length=10)
     plt.tight_layout()
     
-    fig.savefig(f'bar_chart_{up_to}.svg', format='svg')
+    if actually_is_8:
+        up_to = 8
+        fig.savefig(f'bar_chart_{up_to}.svg', format='svg')
+    else:
+        fig.savefig(f'bar_chart_{up_to}.svg', format='svg')
 
 if __name__ == "__main__":
     fire.Fire(run)
