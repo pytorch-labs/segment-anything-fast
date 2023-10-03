@@ -5,7 +5,7 @@ import fire
 
 COLORS = list(matplotlib.colors.TABLEAU_COLORS.values())
 
-def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good):
+def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good, up_to):
     x_values = []
     y_values = []
     bar_colors = []
@@ -63,17 +63,19 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
 
             
 
-    ax.set_xticklabels(ax.get_xticklabels(), rotation = 15, ha="right")
+    tlabels = ax.get_xticklabels()
+    tlabels = tlabels[:up_to] + list(map(lambda x: "", tlabels[up_to:]))
+    ax.set_xticklabels(tlabels, rotation = 15, ha="right")
 
 
-def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, techniques, batch_size_idx, up_good, title="", relative=False, data_format=None):
+def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, techniques, batch_size_idx, up_good, up_to, title="", relative=False, data_format=None):
     category_column = "technique"
     if not isinstance(ylim_low, tuple):
         ylim_low = (ylim_low, ylim_low)
     if not isinstance(ylim_high, tuple):
         ylim_high = (ylim_high, ylim_high)
 
-    def helper(sam_model_type, ax1, ylim_low, ylim_high, va):
+    def helper(sam_model_type, ax1, ylim_low, ylim_high, va, up_to):
         vit_b_df = df[df['sam_model_type'] == sam_model_type]
 
         vit_b_df = vit_b_df.copy()
@@ -83,9 +85,9 @@ def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, t
                 vit_b_df[value_column].iloc[0])
 
         make_sub_chart(vit_b_df, ax1, f"{title} for {sam_model_type}",
-                       category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good)
-    helper("vit_b", ax1, ylim_low[0], ylim_high[0], va)
-    helper("vit_h", ax2, ylim_low[1], ylim_high[1], va)
+                       category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good, up_to)
+    helper("vit_b", ax1, ylim_low[0], ylim_high[0], va, up_to)
+    helper("vit_h", ax2, ylim_low[1], ylim_high[1], va, up_to)
 
 def run(up_to):
     matplotlib.rcParams.update({'font.size': 48})
@@ -106,9 +108,9 @@ def run(up_to):
     
     for batch_size_idx, (batch_size, hlim, va) in enumerate(zip([32, 1], [100, 100], ["top", "bottom"])):
         df = mdf[mdf["batch_size"] == batch_size]
-        make_row_chart(df, "img/s", *axs[0], f"Batch size {batch_size}", (0.0, 0.0), (100.0, 100.0), va, techniques, batch_size_idx, True,
+        make_row_chart(df, "img/s", *axs[0], f"Batch size {batch_size}", (0.0, 0.0), (100.0, 100.0), va, techniques, batch_size_idx, True, up_to,
                        "Images per second", data_format="{:.1f}")
-        make_row_chart(df, "memory(GiB)", *axs[1], f"Batch size {batch_size}", 0, 60, va, techniques, batch_size_idx, False,
+        make_row_chart(df, "memory(GiB)", *axs[1], f"Batch size {batch_size}", 0, 60, va, techniques, batch_size_idx, False, up_to,
                        title="Memory savings", data_format="{:.0f}")
     for ax in axs[1:]:
         ax[0].legend()
