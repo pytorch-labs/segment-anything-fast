@@ -64,9 +64,8 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
             
 
     tlabels = ax.get_xticklabels()
+    tlabels[-1] = matplotlib.text.Text(7, 0, 'bf 16sparse')
     tlabels = tlabels[:up_to] + list(map(lambda x: "", tlabels[up_to:]))
-    if tlabels[-1] == "sparse":
-        tlabels[-1] = "bf16 sparse"
     ax.set_xticklabels(tlabels, rotation = 15, ha="right")
 
 
