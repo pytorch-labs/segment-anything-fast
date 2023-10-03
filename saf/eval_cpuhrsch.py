@@ -158,7 +158,7 @@ def run_traces(*args, **kwargs):
 # run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
 print_header = True
-for bs, model in itertools.product([1, 32, 64, 128], ["vit_b", "vit_h"]):
+for bs, model in itertools.product([32, 64], ["vit_b", "vit_h"]):
     # run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header, capture_output=False)
     # print_header = False
     # run_experiment("bf16",        "codesign",                    model, bs, 32, use_half=True)
@@ -168,9 +168,8 @@ for bs, model in itertools.product([1, 32, 64, 128], ["vit_b", "vit_h"]):
     # if bs > 1:
     #     run_experiment("NT",      "local-fork",                  model, bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1))
     run_experiment("int8",        "local-fork",                  model, bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant")
-    run_experiment("static_int8", "local-fork",                  model, bs, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=(bs > 1), compress="static_quant")
-    run_experiment("static_int8", "local-fork",                  model, bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="static_quant")
-    # run_experiment("sparse",      "local-fork",                  model, bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="int4_dynamic_quant_sparse")
+    run_experiment("sparse",      "local-fork",                  model, bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
+    run_experiment("sparse_int8", "local-fork",                  model, bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="int4_dynamic_quant_sparse")
 
 # -- Static quant
 # run_traces("static",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
