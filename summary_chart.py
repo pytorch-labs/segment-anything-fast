@@ -66,7 +66,6 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     tlabels = ax.get_xticklabels()
     tlabels[2] = matplotlib.text.Text(2, 0, 'com.')
     tlabels[4] = matplotlib.text.Text(4, 0, 'T')
-    tlabels[-1] = matplotlib.text.Text(7, 0, '2:4 bf16')
     tlabels = tlabels[:up_to] + list(map(lambda x: "", tlabels[up_to:]))
     ax.set_xticklabels(tlabels, rotation = 0, ha="center")
 
@@ -99,9 +98,11 @@ def run(up_to):
     mdf_ = pd.read_csv(csv_file)
     mdf = mdf_.dropna(subset=["batch_size"])
     techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'int8': 6}
-    # techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'int8': 6, 'sparse': 7}
-    print("techniques: ", techniques)
+    if up_to == 7:
+        techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'sparse': 6}
     keys = [k for (k, v) in sorted(techniques.items(), key=lambda kv: kv[1])]
+    if up_to == 8:
+        up_to = 6
     mdf = pd.concat([mdf[mdf["technique"] == keys[i]] for i in range(up_to)])
     print("keys: ", keys)
 
