@@ -338,7 +338,7 @@ def run(
         from static_quant import apply_static_quant
         apply_static_quant(predictor.model.image_encoder)
         from pathlib import Path
-        weights_path = Path(f"{sam_model_type}_{batch_size}_static_quant_weights.ptk")
+        weights_path = Path(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
         if weights_path.exists() and weights_path.is_file():
             print("Loading static quantization weights")
             weights = torch.load(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")

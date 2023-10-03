@@ -80,44 +80,46 @@ def matmul_kernel_with_block_pointers(
                                     offsets=(pid_m * BLOCK_SIZE_M, pid_n * BLOCK_SIZE_N),
                                     block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_N), order=(1, 0))
 
-    s1_block_ptr = tl.make_block_ptr(base=s1_ptr, shape=(M, N), strides=(stride_s1m, stride_s1n),
-                                     offsets=(pid_m * BLOCK_SIZE_M, pid_n * BLOCK_SIZE_N),
-                                     block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_N), order=(1, 0))
-    s2_block_ptr = tl.make_block_ptr(base=s2_ptr, shape=(M, N), strides=(stride_s2m, stride_s2n),
-                                     offsets=(pid_m * BLOCK_SIZE_M, pid_n * BLOCK_SIZE_N),
-                                     block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_N), order=(1, 0))
-    s1 = tl.load(s1_block_ptr) #, boundary_check=(0, 1))
+    offs_m = pid_m * BLOCK_SIZE_M + tl.arange(0, BLOCK_SIZE_M)
+    offs_n = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)
+    s1_ptrs = s1_ptr + offs_m[:, None] * stride_s1m + offs_n[None, :] * stride_s1n
+    s2_ptrs = s2_ptr + offs_m[:, None] * stride_s2m + offs_n[None, :] * stride_s2n
+    s1 = tl.load(s1_ptrs)
     c = c * s1
-    s2 = tl.load(s2_block_ptr) #, boundary_check=(0, 1))
+    s2 = tl.load(s2_ptrs)
     c = c * s2
     c = c.to(tl.bfloat16)
     # Epilogue
     tl.store(c_block_ptr, c) #, boundary_check=(0, 1))
 
 import torch.utils.benchmark as benchmark
-def benchmark_torch_function_in_microseconds(f, *args, **kwargs):
+def benchmark_torch_function_in_microseconds(f, number, *args, **kwargs):
     try:
         t0 = benchmark.Timer(
             stmt="f(*args, **kwargs)", globals={"args": args, "kwargs": kwargs, "f": f}
         )
     except:
         return None
-    return t0.timeit(number=10).mean * 1e6
+    return t0.timeit(number=number).mean * 1e6
 
 def _autotune(configs, function):
     best = None
     best_config = None
     for i, config in enumerate(configs):
-        t_config = benchmark_torch_function_in_microseconds(function, *config)
+        t_config = benchmark_torch_function_in_microseconds(function, 1, *config)
         if t_config is not None:
             if best is not None:
+                if t_config < best * 2:
+                    t_config = benchmark_torch_function_in_microseconds(function, 10, *config)
                 if t_config < best:
                     best = t_config
                     best_config = config
             else:
+                t_config = benchmark_torch_function_in_microseconds(function, 10, *config)
                 best = t_config
                 best_config = config
-        print(f"i: {i+1}/{len(configs)} ", str(config), " :", str(t_config))
+        print(f"\ri: {i+1}/{len(configs)} ", str(config), " :", str(t_config), "\t\t", end='')
+    print("")
     return best, best_config
 
 def _load_best_configs():
@@ -149,15 +151,17 @@ def _find_config(key_tensors, function):
     global BEST_CONFIGS
     if BEST_CONFIGS is None:
         BEST_CONFIGS = _load_best_configs()
+    if BEST_CONFIGS is None:
+        BEST_CONFIGS = {}
     key = _create_best_configs_key(key_tensors)
     if key in BEST_CONFIGS:
         return BEST_CONFIGS[key], False
 
     print(f"Could not find a config for key {key}")
     import itertools
-    configs = []
-    for (BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps) in itertools.product([64, 128], [64, 128, 256], [32, 64], [8], [3, 4, 5], [2, 4, 8]):
-        configs.append((BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps))
+    # (BLOCK_M, BLOCK_N, BLOCK_SIZE_K, GROUP_SIZE_M, num_stages, num_warps)
+    configs = itertools.product([32, 64, 128, 256], [32, 64, 128, 256], [32, 64], [4, 8], [3, 4, 5], [2, 4, 8])
+    configs = list(filter(lambda x: not(x[0] == 256 and x[1] == 256), configs))
     print(f"Trying {len(configs)} configurations.")
     best, best_config = _autotune(configs, function)
     print("Found best_config ", best_config, " with time ", best, " for key ", key)
