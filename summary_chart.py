@@ -64,8 +64,10 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
             
 
     tlabels = ax.get_xticklabels()
-    tlabels[2] = matplotlib.text.Text(2, 0, 'com.')
+    tlabels[2] = matplotlib.text.Text(2, 0, 'TC')
     tlabels[4] = matplotlib.text.Text(4, 0, 'T')
+    if up_to == 8:
+        tlabels[-1] = matplotlib.text.Text(6, 0, '2:4')
     tlabels = tlabels[:up_to] + list(map(lambda x: "", tlabels[up_to:]))
     ax.set_xticklabels(tlabels, rotation = 0, ha="center")
 
