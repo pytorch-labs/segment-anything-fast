@@ -86,7 +86,7 @@ def quant_int8_dynamic_per_token_linear(
 
         # Does torch.mm(tmp, w_vals_int8_t).mul(x_scales_flat).mul(w_scales_flat).to(out_dtype)
         # Can downcast only at the very end
-        y = torch.ops.my_int_mm.int_mm(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, out_dtype)
+        y = torch.ops.custom_int_mm.int_mm_dequant(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, out_dtype)
         return y.reshape(*x_vals_int8.shape[:-1], -1)
 
     # like F.linear, but with int8 dynamic quantization of activation,
