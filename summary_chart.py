@@ -16,13 +16,8 @@ def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniq
     x_values = list(df[category_column])
     y_values = list(df[value_column])
     # import pdb; pdb.set_trace()
-    bar_colors = []
-    for i, _ in enumerate(techniques.keys()):
-        if up_to == i:
-            bar_colors.append(COLORS[2])
-        else:
-            bar_colors.append(COLORS[0])
     x_coords = [techniques[x] for x in x_values]
+    bar_colors = [COLORS[0] for _ in range(len(x_coords))]
     ax.bar(x_values, y_values, label=label, color=bar_colors)
 
     # Customize the chart labels and title
