@@ -144,7 +144,7 @@ def run(up_to):
         ax[0].legend()
         ax[1].legend()
     # plt.tick_params(axis='both', which='both', length=10)
-    plt.tight_layout()
+    # plt.tight_layout()
     
     if actually_is_8:
         up_to = 7
