@@ -2,8 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 import fire
+import numpy as np
 
-COLORS = list(matplotlib.colors.TABLEAU_COLORS.values())
+# COLORS = list(matplotlib.colors.TABLEAU_COLORS.values())
+c = 0.2
+COLORS = list((1. - c) * plt.get_cmap("Blues_r")(np.linspace(0., 1., 10)) + c * np.ones((10, 4)))
+# import pdb; pdb.set_trace()
 
 def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good, up_to):
     x_values = []
