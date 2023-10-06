@@ -1,4 +1,5 @@
 import pandas as pd
+from collections import OrderedDict
 import matplotlib.pyplot as plt
 import matplotlib
 import fire
@@ -9,23 +10,15 @@ COLORS = [(0.7, 0.7, 0.7), (0., 0., 0.), (0.9, 0.9, 0.9)]
 # import pdb; pdb.set_trace()
 
 def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good, up_to):
-    x_values = []
-    y_values = []
+    x_values = list(df[category_column])
+    y_values = list(df[value_column])
     bar_colors = []
-    x_idx = 0
-    for i, key in enumerate(techniques.keys()):
-        if key in df[category_column].tolist():
-            x_values.append(key)
-            y_values.append(df[value_column].tolist()[x_idx])
-            if up_to == i:
-                bar_colors.append(COLORS[2])
-            else:
-                bar_colors.append(COLORS[batch_size_idx])
-            x_idx += 1
+    for i, _ in enumerate(techniques.keys()):
+        if up_to == i:
+            bar_colors.append(COLORS[2])
         else:
-            x_values.append(key)
-            y_values.append(0)
-    x_coords = [techniques[name] for name in df[category_column]]
+            bar_colors.append(COLORS[batch_size_idx])
+    x_coords = list(techniques.keys())
     ax.bar(x_values, y_values, label=label, color=bar_colors)
 
     # Customize the chart labels and title
@@ -110,12 +103,13 @@ def run(up_to):
     techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'int8': 6}
     if up_to == 8:
         techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'sparse': 6}
+    techniques = OrderedDict(sorted(techniques.items(), key=lambda kv: kv[1]))
     keys = [k for (k, v) in sorted(techniques.items(), key=lambda kv: kv[1])]
     actually_is_8 = False
     if up_to == 8:
         actually_is_8 = True
         up_to = 7
-    mdf = pd.concat([mdf[mdf["technique"] == keys[i]] for i in range(up_to)])
+    # mdf = pd.concat([mdf[mdf["technique"] == keys[i]] for i in range(up_to)])
     print("keys: ", keys)
 
     mdf["memory(GiB)"] = mdf["memory(MiB)"] // 1024
