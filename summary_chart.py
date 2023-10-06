@@ -119,7 +119,20 @@ def run(up_to):
                    data_format="{:.0f}", highlight=True)
     make_row_chart(COLORS[0], other_vit_b, "memory(GiB)", axs[1][0], "Batch size 32", 0, 60, va, techniques, False, up_to, "",
                    data_format="{:.0f}", highlight=True)
-    # ax2.set_facecolor((252 / 255., 246 / 255., 229 / 255.))
+
+    va = "bottom"
+    make_row_chart(COLORS[1], baseline_vit_h, "img/s", axs[0][1], "Batch size 1", 0.0, 100.0, va, techniques, True, up_to, "",
+                   data_format="{:.0f}")
+    make_row_chart(COLORS[1], baseline_vit_h, "memory(GiB)", axs[1][1], "Batch size 1", 0, 60, va, techniques, False, up_to, "",
+                   data_format="{:.0f}")
+    va = "top"
+    make_row_chart(COLORS[0], other_vit_h, "img/s", axs[0][1], "Batch size 32", 0.0, 100.0, va, techniques, True, up_to, "",
+                   data_format="{:.0f}", highlight=True)
+    make_row_chart(COLORS[0], other_vit_h, "memory(GiB)", axs[1][1], "Batch size 32", 0, 60, va, techniques, False, up_to, "",
+                   data_format="{:.0f}", highlight=True)
+
+    axs[0][1].set_facecolor((252 / 255., 246 / 255., 229 / 255.))
+    axs[1][1].set_facecolor((252 / 255., 246 / 255., 229 / 255.))
 
     for ax in axs[1:]:
         ax[0].legend()
