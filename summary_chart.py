@@ -9,15 +9,16 @@ import numpy as np
 COLORS = [(0.7, 0.7, 0.7), (0., 0., 0.), (0.9, 0.9, 0.9)]
 # import pdb; pdb.set_trace()
 
-def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good, up_to):
+def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, up_good, up_to):
     x_values = list(df[category_column])
     y_values = list(df[value_column])
+    # import pdb; pdb.set_trace()
     bar_colors = []
     for i, _ in enumerate(techniques.keys()):
         if up_to == i:
             bar_colors.append(COLORS[2])
         else:
-            bar_colors.append(COLORS[batch_size_idx])
+            bar_colors.append(COLORS[0])
     x_coords = list(techniques.keys())
     ax.bar(x_values, y_values, label=label, color=bar_colors)
 
@@ -64,35 +65,19 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
             
 
     tlabels = ax.get_xticklabels()
-    tlabels[2] = matplotlib.text.Text(2, 0, 'compile')
-    tlabels[4] = matplotlib.text.Text(4, 0, 'Triton')
-    if up_to == 8:
-        tlabels[-1] = matplotlib.text.Text(6, 0, '2:4')
-    tlabels = tlabels[:up_to] + list(map(lambda x: "", tlabels[up_to:]))
+    # tlabels[2] = matplotlib.text.Text(2, 0, 'compile')
+    # tlabels[4] = matplotlib.text.Text(4, 0, 'Triton')
+    # if up_to == 8:
+    #     tlabels[-1] = matplotlib.text.Text(6, 0, '2:4')
+    # tlabels = tlabels[:up_to] + list(map(lambda x: "", tlabels[up_to:]))
     ax.set_xticklabels(tlabels, rotation = 0, ha="center")
 
 
-def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, techniques, batch_size_idx, up_good, up_to, title=None, relative=False, data_format=None):
+def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniques, up_good, up_to, title=None, data_format=None):
     category_column = "technique"
-    if not isinstance(ylim_low, tuple):
-        ylim_low = (ylim_low, ylim_low)
-    if not isinstance(ylim_high, tuple):
-        ylim_high = (ylim_high, ylim_high)
 
-    def helper(sam_model_type, ax1, ylim_low, ylim_high, va, up_to):
-        vit_b_df = df[df['sam_model_type'] == sam_model_type]
-
-        vit_b_df = vit_b_df.copy()
-
-        if relative:
-            vit_b_df[value_column] = vit_b_df[value_column].div(
-                vit_b_df[value_column].iloc[0])
-
-        make_sub_chart(vit_b_df, ax1, title if title is None else f"{title}{sam_model_type}",
-                       category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good, up_to)
-    helper("vit_b", ax1, ylim_low[0], ylim_high[0], va, up_to)
-    helper("vit_h", ax2, ylim_low[1], ylim_high[1], va, up_to)
-    ax2.set_facecolor((252 / 255., 246 / 255., 229 / 255.))
+    make_sub_chart(df, ax, title,
+                   category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, up_good, up_to)
 
 def run(up_to):
     matplotlib.rcParams.update({'font.size': 48})
@@ -104,7 +89,7 @@ def run(up_to):
     if up_to == 8:
         techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'sparse': 6}
     techniques = OrderedDict(sorted(techniques.items(), key=lambda kv: kv[1]))
-    keys = [k for (k, v) in sorted(techniques.items(), key=lambda kv: kv[1])]
+    keys = list(techniques.keys())
     actually_is_8 = False
     if up_to == 8:
         actually_is_8 = True
@@ -116,13 +101,27 @@ def run(up_to):
     mdf["img/s"] = mdf["img_s(avg)"].round(decimals=0) // 1
     
     fig, axs = plt.subplots(2, 2, figsize=(40, 18))
+
+    baseline = mdf[mdf["batch_size"] == 1]
+    baseline = baseline[baseline["technique"] == "fp32"]
+    baseline_vit_b = baseline[baseline["sam_model_type"] == "vit_b"]
+    baseline_vit_h = baseline[baseline["sam_model_type"] == "vit_h"]
+    other = mdf[mdf["batch_size"] == 32]
+    other = other[other["technique"] != "fp32"]
+    other_vit_b = other[other["sam_model_type"] == "vit_b"]
+    other_vit_h = other[other["sam_model_type"] == "vit_h"]
     
-    for batch_size_idx, (batch_size, hlim, va) in enumerate(zip([32, 1], [100, 100], ["top", "bottom"])):
-        df = mdf[mdf["batch_size"] == batch_size]
-        make_row_chart(df, "img/s", *axs[0], f"Batch size {batch_size}", (0.0, 0.0), (100.0, 100.0), va, techniques, batch_size_idx, True, up_to, "",
-                       data_format="{:.0f}")
-        make_row_chart(df, "memory(GiB)", *axs[1], f"Batch size {batch_size}", 0, 60, va, techniques, batch_size_idx, False, up_to, "",
-                       data_format="{:.0f}")
+    va = "top"
+    make_row_chart(baseline_vit_b, "img/s", axs[0][0], "Batch size 1", 0.0, 100.0, va, techniques, True, up_to, "",
+                   data_format="{:.0f}")
+    make_row_chart(baseline_vit_b, "memory(GiB)", axs[1][0], "Batch size 1", 0, 60, va, techniques, False, up_to, "",
+                   data_format="{:.0f}")
+    make_row_chart(other_vit_b, "img/s", axs[0][0], "Batch size 32", 0.0, 100.0, va, techniques, True, up_to, "",
+                   data_format="{:.0f}")
+    make_row_chart(other_vit_b, "memory(GiB)", axs[1][0], "Batch size 32", 0, 60, va, techniques, False, up_to, "",
+                   data_format="{:.0f}")
+    # ax2.set_facecolor((252 / 255., 246 / 255., 229 / 255.))
+
     for ax in axs[1:]:
         ax[0].legend()
         ax[1].legend()
