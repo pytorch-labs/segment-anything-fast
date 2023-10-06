@@ -96,6 +96,7 @@ def make_row_chart(df, value_column, ax1, ax2, label, ylim_low, ylim_high, va, t
                        category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good, up_to)
     helper("vit_b", ax1, ylim_low[0], ylim_high[0], va, up_to)
     helper("vit_h", ax2, ylim_low[1], ylim_high[1], va, up_to)
+    ax2.set_facecolor("brown")
 
 def run(up_to):
     matplotlib.rcParams.update({'font.size': 48})
