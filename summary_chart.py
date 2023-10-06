@@ -9,7 +9,10 @@ import numpy as np
 COLORS = [(0.7, 0.7, 0.7), (0., 0., 0.), (0.9, 0.9, 0.9)]
 # import pdb; pdb.set_trace()
 
-def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, up_good, up_to):
+
+def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniques, up_good, up_to, title=None, data_format=None):
+    category_column = "technique"
+
     x_values = list(df[category_column])
     y_values = list(df[value_column])
     # import pdb; pdb.set_trace()
@@ -19,18 +22,14 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
             bar_colors.append(COLORS[2])
         else:
             bar_colors.append(COLORS[0])
-    x_coords = list(techniques.keys())
+    x_coords = [techniques[x] for x in x_values]
     ax.bar(x_values, y_values, label=label, color=bar_colors)
 
     # Customize the chart labels and title
     # ax.set_xlabel(category_column)
     ax.set_ylabel(value_column)
-    if title is not None:
-        ax.set_title(title)
-    if ylim_low is None:
-        assert ylim_high is None
-    else:
-        ax.set_ylim(ylim_low, ylim_high)
+    ax.set_title(title)
+    ax.set_ylim(ylim_low, ylim_high)
 
     tick_positions = ax.get_yticks()
     for tick in tick_positions:
@@ -73,12 +72,6 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     ax.set_xticklabels(tlabels, rotation = 0, ha="center")
 
 
-def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniques, up_good, up_to, title=None, data_format=None):
-    category_column = "technique"
-
-    make_sub_chart(df, ax, title,
-                   category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, up_good, up_to)
-
 def run(up_to):
     matplotlib.rcParams.update({'font.size': 48})
     
@@ -110,6 +103,9 @@ def run(up_to):
     other = other[other["technique"] != "fp32"]
     other_vit_b = other[other["sam_model_type"] == "vit_b"]
     other_vit_h = other[other["sam_model_type"] == "vit_h"]
+
+    other_vit_b = pd.concat([other_vit_b[other_vit_b["technique"] == keys[i]] for i in range(1, 7)])
+    other_vit_h = pd.concat([other_vit_h[other_vit_h["technique"] == keys[i]] for i in range(1, 7)])
     
     va = "top"
     make_row_chart(baseline_vit_b, "img/s", axs[0][0], "Batch size 1", 0.0, 100.0, va, techniques, True, up_to, "",
