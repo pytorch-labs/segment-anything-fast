@@ -10,14 +10,14 @@ COLORS = [(0.7, 0.7, 0.7), (0., 0., 0.), (0.9, 0.9, 0.9)]
 # import pdb; pdb.set_trace()
 
 
-def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniques, up_good, up_to, title=None, data_format=None, highlight=False):
+def make_row_chart(color, df, value_column, ax, label, ylim_low, ylim_high, va, techniques, up_good, up_to, title=None, data_format=None, highlight=False):
     category_column = "technique"
 
     x_values = list(df[category_column])
     y_values = list(df[value_column])
     # import pdb; pdb.set_trace()
     x_coords = [techniques[x] for x in x_values]
-    bar_colors = [COLORS[0] for _ in range(len(x_coords))]
+    bar_colors = [color for _ in range(len(x_coords))]
     ax.bar(x_values, y_values, label=label, color=bar_colors)
     if highlight:
         ax.bar(x_values[up_to-1], y_values[up_to-1], color=(222/255., 75/255., 52/255.))
@@ -110,14 +110,14 @@ def run(up_to):
     other_vit_h = pd.concat([other_vit_h[other_vit_h["technique"] == keys[i]] for i in range(1, 7)])
     
     va = "bottom"
-    make_row_chart(baseline_vit_b, "img/s", axs[0][0], "Batch size 1", 0.0, 100.0, va, techniques, True, up_to, "",
+    make_row_chart(COLORS[1], baseline_vit_b, "img/s", axs[0][0], "Batch size 1", 0.0, 100.0, va, techniques, True, up_to, "",
                    data_format="{:.0f}")
-    make_row_chart(baseline_vit_b, "memory(GiB)", axs[1][0], "Batch size 1", 0, 60, va, techniques, False, up_to, "",
+    make_row_chart(COLORS[1], baseline_vit_b, "memory(GiB)", axs[1][0], "Batch size 1", 0, 60, va, techniques, False, up_to, "",
                    data_format="{:.0f}")
     va = "top"
-    make_row_chart(other_vit_b, "img/s", axs[0][0], "Batch size 32", 0.0, 100.0, va, techniques, True, up_to, "",
+    make_row_chart(COLORS[0], other_vit_b, "img/s", axs[0][0], "Batch size 32", 0.0, 100.0, va, techniques, True, up_to, "",
                    data_format="{:.0f}", highlight=True)
-    make_row_chart(other_vit_b, "memory(GiB)", axs[1][0], "Batch size 32", 0, 60, va, techniques, False, up_to, "",
+    make_row_chart(COLORS[0], other_vit_b, "memory(GiB)", axs[1][0], "Batch size 32", 0, 60, va, techniques, False, up_to, "",
                    data_format="{:.0f}", highlight=True)
     # ax2.set_facecolor((252 / 255., 246 / 255., 229 / 255.))
 
