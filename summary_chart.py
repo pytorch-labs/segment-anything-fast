@@ -5,7 +5,7 @@ import fire
 import numpy as np
 
 # COLORS = list(matplotlib.colors.TABLEAU_COLORS.values())
-c = 0.2
+c = 0.4
 COLORS = list((1. - c) * plt.get_cmap("Blues_r")(np.linspace(0., 1., 10)) + c * np.ones((10, 4)))
 # import pdb; pdb.set_trace()
 
@@ -14,11 +14,14 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     y_values = []
     bar_colors = []
     x_idx = 0
-    for key in techniques.keys():
+    for i, key in enumerate(techniques.keys()):
         if key in df[category_column].tolist():
             x_values.append(key)
             y_values.append(df[value_column].tolist()[x_idx])
-            bar_colors.append(COLORS[batch_size_idx])
+            if i == up_to - 1:
+                bar_colors.append(COLORS[batch_size_idx + 1])
+            else:
+                bar_colors.append(COLORS[batch_size_idx])
             x_idx += 1
         else:
             x_values.append(key)
