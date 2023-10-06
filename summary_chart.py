@@ -39,8 +39,6 @@ def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniq
     difference = None
     # Add data labels or data points above the bars
     for i, (x, value) in enumerate(zip(x_coords, df[value_column])):
-        if i == up_to:
-            break
         if i > 0:
             difference = value / last_value
         last_value = value
@@ -48,6 +46,8 @@ def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniq
             ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va, color='black')
         else:
             ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va)
+        if i == up_to:
+            break
     if difference is not None and difference > 1:
         difference_v = round(difference * 100) - 100
         if up_good:
@@ -109,11 +109,12 @@ def run(up_to):
     other_vit_b = pd.concat([other_vit_b[other_vit_b["technique"] == keys[i]] for i in range(1, 7)])
     other_vit_h = pd.concat([other_vit_h[other_vit_h["technique"] == keys[i]] for i in range(1, 7)])
     
-    va = "top"
+    va = "bottom"
     make_row_chart(baseline_vit_b, "img/s", axs[0][0], "Batch size 1", 0.0, 100.0, va, techniques, True, up_to, "",
                    data_format="{:.0f}")
     make_row_chart(baseline_vit_b, "memory(GiB)", axs[1][0], "Batch size 1", 0, 60, va, techniques, False, up_to, "",
                    data_format="{:.0f}")
+    va = "top"
     make_row_chart(other_vit_b, "img/s", axs[0][0], "Batch size 32", 0.0, 100.0, va, techniques, True, up_to, "",
                    data_format="{:.0f}")
     make_row_chart(other_vit_b, "memory(GiB)", axs[1][0], "Batch size 32", 0, 60, va, techniques, False, up_to, "",
