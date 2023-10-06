@@ -5,7 +5,7 @@ import fire
 import numpy as np
 
 # COLORS = list(matplotlib.colors.TABLEAU_COLORS.values())
-COLORS = ["red", "purple", "blue"]
+COLORS = [(0, 0, 0), (0.3, 0.3, 0.3), (0.6, 0.6, 0.6)]
 # import pdb; pdb.set_trace()
 
 def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good, up_to):
@@ -47,7 +47,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
             difference = value / last_value
         last_value = value
         if va == "top":
-            ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va, color='white')
+            ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va, color='black')
         else:
             ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va)
     if difference is not None and difference > 1:
