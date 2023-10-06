@@ -81,14 +81,14 @@ def run(up_to):
     mdf_ = pd.read_csv(csv_file)
     mdf = mdf_.dropna(subset=["batch_size"])
     techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'int8': 6}
-    if up_to == 8:
+    if up_to == 7:
         techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'sparse': 6}
     techniques = OrderedDict(sorted(techniques.items(), key=lambda kv: kv[1]))
     keys = list(techniques.keys())
     actually_is_8 = False
-    if up_to == 8:
+    if up_to == 7:
         actually_is_8 = True
-        up_to = 7
+        up_to = 6
     # mdf = pd.concat([mdf[mdf["technique"] == keys[i]] for i in range(up_to)])
     print("keys: ", keys)
 
@@ -128,7 +128,7 @@ def run(up_to):
     plt.tight_layout()
     
     if actually_is_8:
-        up_to = 8
+        up_to = 7
         fig.savefig(f'bar_chart_{up_to}.svg', format='svg')
     else:
         fig.savefig(f'bar_chart_{up_to}.svg', format='svg')
