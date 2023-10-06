@@ -62,7 +62,7 @@ def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniq
 
     tlabels = []
     for i in range(up_to + 1):
-        tlabels.append(matplotlib.text.Text(i, 0, list(techniques.keys())[i - 1]))
+        tlabels.append(matplotlib.text.Text(i, 0, list(techniques.keys())[i]))
 
     # tlabels[2] = matplotlib.text.Text(2, 0, 'compile')
     # tlabels[4] = matplotlib.text.Text(4, 0, 'Triton')
