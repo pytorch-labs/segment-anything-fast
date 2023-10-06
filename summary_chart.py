@@ -46,7 +46,7 @@ def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniq
             ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va, color='black')
         else:
             ax.text(x, 0.9 * value, data_format.format(value), ha='center', va=va)
-        if i == up_to:
+        if x == up_to:
             break
     if difference is not None and difference > 1:
         difference_v = round(difference * 100) - 100
