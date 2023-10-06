@@ -18,7 +18,10 @@ def make_row_chart(color, df, value_column, ax, label, ylim_low, ylim_high, va, 
     # import pdb; pdb.set_trace()
     x_coords = [techniques[x] for x in x_values]
     bar_colors = [color for _ in range(len(x_coords))]
-    ax.bar(x_values, y_values, label=label, color=bar_colors)
+    edge_colors = ["black" for _ in range(len(x_coords))]
+    bar_colors = bar_colors[:up_to] + ([COLORS[2]] * (len(bar_colors) - up_to))
+    edge_colors = bar_colors[:up_to] + ([COLORS[2]] * (len(edge_colors) - up_to))
+    ax.bar(x_values, y_values, label=label, color=bar_colors, edgecolor=edge_colors)
     if highlight:
         ax.bar(x_values[up_to-1], y_values[up_to-1], color="white", edgecolor="black")
 
