@@ -5,7 +5,7 @@ import fire
 import numpy as np
 
 # COLORS = list(matplotlib.colors.TABLEAU_COLORS.values())
-COLORS = [(0, 0, 0), (0.3, 0.3, 0.3), (0.6, 0.6, 0.6)]
+COLORS = [(0.3, 0.3, 0.3), (0., 0., 0.), (0.6, 0.6, 0.6)]
 # import pdb; pdb.set_trace()
 
 def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_high, data_format, label, va, techniques, batch_size_idx, up_good, up_to):
