@@ -189,7 +189,6 @@ def build_data(coco_img_ids,
                point_sampling_cache_dir,
                predictor,
                use_half,
-               use_half_decoder,
                use_nested_tensor,
                pad_input_image_batch):
     cache = diskcache.Cache(point_sampling_cache_dir)
@@ -240,14 +239,14 @@ def build_data(coco_img_ids,
 
         def cat_and_cast(b, use_half):
             b = torch.cat(b) if len(b) > 0 else None
-            if use_half and b is not None:
-                return b.bfloat16()
+            if use_half is not None and b is not None:
+                return b.to(use_half)
             return b
 
-        def to_nested_tensor(data, sizes=None, use_half=False):
+        def to_nested_tensor(data, sizes=None, use_half=None):
             if len(data) == 0:
                 return None
-            dtype = torch.bfloat16 if use_half else torch.float32
+            dtype = use_half if use_half is not None else torch.float32
 
             if sizes is not None:
                 data = [d.view(s) for (d, s) in zip(data, sizes)]
@@ -267,11 +266,11 @@ def build_data(coco_img_ids,
             batch[0] = to_nested_tensor(batch[0], use_half=use_half)
 
         if use_nested_tensor:
-            batch[1] = to_nested_tensor(batch[1], batch[2], use_half_decoder)
+            batch[1] = to_nested_tensor(batch[1], batch[2], use_half)
             batch[2] = None
             batch[3] = None
         else:
-            batch[1] = cat_and_cast(batch[1], use_half_decoder)
+            batch[1] = cat_and_cast(batch[1], use_half)
 
         batch[4] = cat_and_cast(batch[4], False)
 

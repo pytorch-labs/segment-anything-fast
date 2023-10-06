@@ -277,8 +277,7 @@ def run(
     coco_category_names=None,
     limit=None,
     img_id=None,
-    use_half=False,
-    use_half_decoder=False,
+    use_half=None,
     use_compile="False",
     use_compile_decoder=False,
     compress=None,
@@ -295,6 +294,15 @@ def run(
     from torch._inductor import config as tritonconfig
     tritonconfig.triton.unique_kernel_names = True
     tritonconfig.epilogue_fusion_first = epilogue_fusion_first
+
+    if use_half is not None:
+        if use_half == "float16":
+            use_half = torch.float16
+        elif use_half == "bfloat16":
+            use_half = torch.bfloat16
+        else:
+            raise ValueError("Expected one of float16 or bfloat for specified {use_half}")
+
 
     # Batch size needs to be a multiple of two and at most 512.
     assert math.log2(batch_size).is_integer()
@@ -317,16 +325,16 @@ def run(
     predictor = SamPredictor(sam)
 
     def prep_model(model, use_half):
-        if use_half:
-            return model.eval().bfloat16()
+        if use_half is not None:
+            return model.eval().to(use_half)
         return model.eval()
 
     predictor.model.image_encoder = prep_model(
         predictor.model.image_encoder, use_half)
     predictor.model.prompt_encoder = prep_model(
-        predictor.model.prompt_encoder, use_half_decoder)
+        predictor.model.prompt_encoder, use_half)
     predictor.model.mask_decoder = prep_model(
-        predictor.model.mask_decoder, use_half_decoder)
+        predictor.model.mask_decoder, use_half)
 
     for block in predictor.model.image_encoder.blocks:
         block.attn.use_rel_pos = use_rel_pos
@@ -377,7 +385,6 @@ def run(
                              point_sampling_cache_dir,
                              predictor,
                              use_half,
-                             use_half_decoder,
                              use_nested_tensor,
                              pad_input_image_batch)
 
@@ -432,9 +439,9 @@ def run(
 
     if print_header:
         print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s(avg)", "batch_ms(avg)/batch_size", "mIoU", "use_compile",
-              "use_half", "compress", "epilogue_fusion_first", "use_half_decoder", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers", "num_batches", "num_images", "profile_path", "memory_path"]))
+              "use_half", "compress", "epilogue_fusion_first", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers", "num_batches", "num_images", "profile_path", "memory_path"]))
     print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, batch_ms_batch_size, mIoU, use_compile,
-          use_half, compress, epilogue_fusion_first, use_half_decoder, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers, num_batches, num_images, profile_path, memory_path])))
+          use_half, compress, epilogue_fusion_first, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers, num_batches, num_images, profile_path, memory_path])))
 
 
 if __name__ == '__main__':
