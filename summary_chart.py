@@ -95,7 +95,7 @@ def run(up_to):
     mdf["memory(GiB)"] = mdf["memory(MiB)"] // 1024
     mdf["img/s"] = mdf["img_s(avg)"].round(decimals=0) // 1
     
-    fig = plt.figure(figsize=(40, 18))
+    fig = plt.figure(figsize=(40, 18), layout="constrained")
     subfigs = fig.subfigures(ncols=2, nrows=2)
     axs = [[], []]
     axs[0].append(subfigs[0][0].subplots())
