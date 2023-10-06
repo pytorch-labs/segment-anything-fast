@@ -13,14 +13,11 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
     y_values = []
     bar_colors = []
     x_idx = 0
-    for i, key in enumerate(techniques.keys()):
+    for _, key in enumerate(techniques.keys()):
         if key in df[category_column].tolist():
             x_values.append(key)
             y_values.append(df[value_column].tolist()[x_idx])
-            if i == up_to:
-                bar_colors.append(COLORS[2])
-            else:
-                bar_colors.append(COLORS[batch_size_idx])
+            bar_colors.append(COLORS[batch_size_idx])
             x_idx += 1
         else:
             x_values.append(key)
@@ -106,9 +103,9 @@ def run(up_to):
     csv_file = "results.csv"
     mdf_ = pd.read_csv(csv_file)
     mdf = mdf_.dropna(subset=["batch_size"])
-    techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'int8': 6}
+    techniques = {'bf16': 0, 'compile': 1, 'SDPA': 2, 'Triton': 3, 'NT': 4, 'int8': 5}
     if up_to == 8:
-        techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'sparse': 6}
+        techniques = {'bf16': 0, 'compile': 1, 'SDPA': 2, 'Triton': 3, 'NT': 4, 'sparse': 5}
     keys = [k for (k, v) in sorted(techniques.items(), key=lambda kv: kv[1])]
     actually_is_8 = False
     if up_to == 8:
