@@ -95,7 +95,13 @@ def run(up_to):
     mdf["memory(GiB)"] = mdf["memory(MiB)"] // 1024
     mdf["img/s"] = mdf["img_s(avg)"].round(decimals=0) // 1
     
-    fig, axs = plt.subplots(2, 2, figsize=(40, 18))
+    fig = plt.figure(figsize=(40, 18))
+    subfigs = fig.subfigures(ncols=2, nrows=2)
+    axs = [[], []]
+    axs[0].append(subfigs[0][0].subplots())
+    axs[0].append(subfigs[0][1].subplots())
+    axs[1].append(subfigs[1][0].subplots())
+    axs[1].append(subfigs[1][1].subplots())
 
     baseline = mdf[mdf["batch_size"] == 1]
     baseline = baseline[baseline["technique"] == "fp32"]
