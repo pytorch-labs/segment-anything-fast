@@ -39,6 +39,8 @@ def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniq
     difference = None
     # Add data labels or data points above the bars
     for i, (x, value) in enumerate(zip(x_coords, df[value_column])):
+        if i == up_to:
+            break
         if i > 0:
             difference = value / last_value
         last_value = value
