@@ -140,8 +140,8 @@ def run(up_to):
     make_row_chart(COLORS[0], other_vit_h, "memory(GiB)", axs[1][1], "Batch size 32", 0, 60, va, techniques, False, up_to, "vit_h",
                    data_format="{:.0f}", highlight=True)
 
-    subfigs[0][1].set_facecolor((252 / 255., 246 / 255., 229 / 255.))
-    subfigs[1][1].set_facecolor((252 / 255., 246 / 255., 229 / 255.))
+    # subfigs[0][1].set_facecolor((252 / 255., 246 / 255., 229 / 255.))
+    # subfigs[1][1].set_facecolor((252 / 255., 246 / 255., 229 / 255.))
 
     for ax in axs[1:]:
         ax[0].legend()
