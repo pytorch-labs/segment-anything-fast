@@ -20,7 +20,7 @@ def make_row_chart(df, value_column, ax, label, ylim_low, ylim_high, va, techniq
     bar_colors = [COLORS[0] for _ in range(len(x_coords))]
     ax.bar(x_values, y_values, label=label, color=bar_colors)
     if highlight:
-        ax.bar(x_values[up_to], y_values[up_to], color="red")
+        ax.bar(x_values[up_to-1], y_values[up_to-1], color="red")
 
     # Customize the chart labels and title
     # ax.set_xlabel(category_column)
