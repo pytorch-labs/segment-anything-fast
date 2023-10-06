@@ -18,7 +18,7 @@ def make_sub_chart(df, ax, title, category_column, value_column, ylim_low, ylim_
         if key in df[category_column].tolist():
             x_values.append(key)
             y_values.append(df[value_column].tolist()[x_idx])
-            if i == up_to - 1:
+            if i == up_to:
                 bar_colors.append(COLORS[batch_size_idx + 1])
             else:
                 bar_colors.append(COLORS[batch_size_idx])
