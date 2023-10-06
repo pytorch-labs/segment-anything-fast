@@ -35,6 +35,7 @@ def _fwd_kernel_aligned(
     H,
     N_CTX,
     P_SEQ,
+    OUT_DTYPE: tl.constexpr,
     BIAS_LAST_SIZE: tl.constexpr,
     B0_NUMEL: tl.constexpr,
     BLOCK_DMODEL: tl.constexpr,
@@ -81,7 +82,7 @@ def _fwd_kernel_aligned(
     qk_scale = sm_scale * 1.44269504
     # load q: it will stay in SRAM throughout
     q = tl.load(Q_block_ptr)  # , boundary_check=(1, 0), padding_option="zero")
-    q = (q * qk_scale).to(tl.bfloat16)
+    q = (q * qk_scale).to(OUT_DTYPE)
     # loop over k, v and update accumulator
     lo = 0
     hi = N_CTX + P_SEQ
@@ -100,8 +101,8 @@ def _fwd_kernel_aligned(
         # , boundary_check=(1, 0), padding_option="zero")
         v = tl.load(V_block_ptr)
         # -- compute qk ---
-        qk = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.bfloat16)
-        qk += tl.dot(q, k, out_dtype=tl.bfloat16)
+        qk = tl.zeros([BLOCK_M, BLOCK_N], dtype=OUT_DTYPE)
+        qk += tl.dot(q, k, out_dtype=OUT_DTYPE)
 
         # -- compute rel_h[:, None] + rel_w[None, :] bias ---
 
@@ -116,7 +117,7 @@ def _fwd_kernel_aligned(
         p = tl.math.exp2(qk - m_i_new[:, None])
         # -- scale and update acc --
         acc *= alpha[:, None]
-        acc += tl.dot(p.to(tl.bfloat16), v)
+        acc += tl.dot(p.to(OUT_DTYPE), v)
         # -- update m_i and l_i --
         l_i = l_i * alpha + tl.sum(p, 1)
         m_i = m_i_new
@@ -136,7 +137,7 @@ def _fwd_kernel_aligned(
         block_shape=(BLOCK_M, BLOCK_DMODEL),
         order=(1, 0)
     )
-    tl.store(O_block_ptr, acc.to(tl.bfloat16))
+    tl.store(O_block_ptr, acc.to(OUT_DTYPE))
 
 
 def _autotune(configs, function):
@@ -179,11 +180,11 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
     assert q.size() == k.size()
     assert q.size() == v.size()
     assert q.size(-2) == rel_h_w.size(-2)
-    assert q.dtype == torch.bfloat16
-    assert k.dtype == torch.bfloat16
-    assert v.dtype == torch.bfloat16
-    assert o.dtype == torch.bfloat16
-    assert rel_h_w.dtype == torch.bfloat16
+    assert (q.dtype == torch.bfloat16 or q.dtype == torch.float16)
+    assert k.dtype == q.dtype
+    assert v.dtype == k.dtype
+    assert o.dtype == v.dtype
+    assert rel_h_w.dtype == q.dtype
     assert rel_h_w.size(-1) == 128
     # assert rel_h_w.size(-1) == 2 * BLOCK_N
 
@@ -206,6 +207,7 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
         q.shape[1],
         q.shape[2],
         P_SEQ,
+        OUT_DTYPE=tl.float16 if q.dtype == torch.float16 else tl.bfloat16,
         BIAS_LAST_SIZE=(rel_h_w.size(-1) // 2),
         B0_NUMEL=rel_h_w.size(-1),
         BLOCK_M=BLOCK_M,
