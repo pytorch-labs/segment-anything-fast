@@ -251,14 +251,7 @@ def build_data(coco_img_ids,
             if sizes is not None:
                 data = [d.view(s) for (d, s) in zip(data, sizes)]
 
-            non_first_sizes = [s[1:] for s in sizes]
-            at_most_first_ragged = all([s == non_first_sizes[0] for s in non_first_sizes])
-            assert at_most_first_ragged
-            buffer = torch.cat(data, dim=0).to(dtype=dtype)
-            offsets = torch.cat([torch.zeros(1, dtype=torch.int64),
-                                 torch.tensor([t.shape[0] for t in data]).cumsum(dim=0)])
-            from torch.nested._internal.nested_tensor import NestedTensor
-            return NestedTensor(buffer, offsets)
+            return torch.nested.nested_tensor(data, dtype=dtype, layout=torch.jagged)
 
         if pad_input_image_batch:
             batch[0] = cat_and_cast(batch[0], use_half)
