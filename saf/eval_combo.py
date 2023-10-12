@@ -19,7 +19,7 @@ PADDED_TENSOR=None
 # Preallocate a "landing" Tensor for incoming data and reuse it across launches.
 def pad_to_batch_size(batch, batch_size, device):
     assert batch.dim() == 4
-    assert batch.is_pinned()
+    # assert batch.is_pinned()
     global PADDED_TENSOR
     if PADDED_TENSOR is None:
         batch = batch.to(device=device, non_blocking=True)
@@ -78,7 +78,7 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
             predictor.reset_image()
             predictor.original_sizes = [d[1].shape[:2] for d in datapoints]
             predictor.input_sizes = [d[2] for d in datapoints]
-            predictor.features_batch = features_batch
+            predictor.features = features_batch
             predictor.is_image_set = True
             nt_coords = nt_coords.unsqueeze(2)
             masks, scores, logits = predictor.predict_torch(
@@ -140,7 +140,7 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
                 predictor.reset_image()
                 predictor.original_size = image.shape[:2]
                 predictor.input_size = input_size
-                predictor.features_batch = features
+                predictor.features = features
                 predictor.is_image_set = True
                 coords = coords.unsqueeze(1)
                 # TODO: Should exclude this from the timed region as well?
@@ -393,7 +393,7 @@ def run(
                                                     batch_size=batch_size,
                                                     collate_fn=build_batch,
                                                     num_workers=num_workers,
-                                                    pin_memory=True)
+                                                    pin_memory=False)
     runner = identity_runner
 
     if profile_path is not None:
