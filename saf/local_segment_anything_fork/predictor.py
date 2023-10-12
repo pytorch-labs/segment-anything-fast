@@ -227,7 +227,7 @@ class SamPredictor:
 
         # Predict masks
         low_res_masks, iou_predictions = self.model.mask_decoder(
-            image_embeddings=self.features_batch,
+            image_embeddings=self.features,
             image_pe=self.model.prompt_encoder.get_dense_pe(),
             sparse_prompt_embeddings=sparse_embeddings,
             dense_prompt_embeddings=dense_embeddings,
@@ -240,7 +240,7 @@ class SamPredictor:
                 # Upscale the masks to the original image resolution
                 m = self.model.postprocess_masks(lrm, input_size, original_size)
                 masks.append(m)
-            masks = torch.nested.nested_tensor(masks)
+            masks = torch.nested.nested_tensor(masks, layout=torch.strided)
         else:
             # Upscale the masks to the original image resolution
             masks = self.model.postprocess_masks(low_res_masks, self.input_size, self.original_size)
