@@ -24,3 +24,7 @@ That means the very last bar is the combination of
 - 2:4 sparse format
 
 ![High level results](bar_chart.svg)
+
+## License
+
+`segment-anything-fast` is released under the [Apache 2.0](https://github.com/pytorch-labs/segment-anything-fast/main/LICENSE) license.
