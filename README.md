@@ -27,4 +27,4 @@ That means the very last bar is the combination of
 
 ## License
 
-`segment-anything-fast` is released under the [Apache 2.0](https://github.com/pytorch-labs/simple_gpt/main/LICENSE) license.
+`segment-anything-fast` is released under the [Apache 2.0](https://github.com/pytorch-labs/segment-anything-fast/main/LICENSE) license.
