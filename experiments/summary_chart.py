@@ -65,7 +65,7 @@ matplotlib.rcParams.update({'font.size': 12})
 csv_file = "results.csv"
 mdf_ = pd.read_csv(csv_file)
 mdf = mdf_.dropna(subset=["batch_size"])
-techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'int8': 6, 'sparse': 7, 'sparse_fp16': 8, 'sparse_int8': 9}
+techniques = {'fp32': 0, 'bf16': 1, 'compile': 2, 'SDPA': 3, 'Triton': 4, 'NT': 5, 'int8': 6, 'sparse': 7}
 print("techniques: ", techniques)
 
 fig, axs = plt.subplots(3, 2, figsize=(20, 20))
