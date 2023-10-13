@@ -151,7 +151,7 @@ def run_traces(*args, **kwargs):
 
 print_header = True
 for bs, model in itertools.product([1, 32, 64], ["vit_b", "vit_h"]):
-    run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header, capture_output=False)
+    run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header)
     print_header = False
     run_experiment("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
     run_experiment("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
@@ -173,6 +173,8 @@ for bs, model in itertools.product([1, 32, 64], ["vit_b", "vit_h"]):
 #     run_experiment("static",     "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
 #     run_experiment("static",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=True, compress="static_quant")
 #     run_experiment("static",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
+<<<<<<< HEAD
+=======
 
 # -- Old experiments 20230915
 # run_experiment("010",  "default",                 "vit_b",  1,  0, print_header=True)
@@ -271,3 +273,4 @@ for bs, model in itertools.product([1, 32, 64], ["vit_b", "vit_h"]):
 # run_experiment("141",  "hacky-nested-encoder", "vit_h", 40, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "True",  "--pad_input_image_batch", "False"])
 # run_experiment("142",  "hacky-nested-encoder", "vit_h", 40, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--pad_input_image_batch", "True"])
 # run_experiment("143",  "hacky-nested-encoder", "vit_h", 40, 32, use_half=True,                                                                             use_nested_tensor=True, extra_args=["--use_rel_pos", "False", "--pad_input_image_batch", "False"])
+>>>>>>> origin/main
