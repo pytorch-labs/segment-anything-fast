@@ -68,7 +68,8 @@ def run_experiment(idx,
                    limit=None,
                    profile_path=None,
                    profile_top=False,
-                   memory_path=None):
+                   memory_path=None,
+                   custom_checkpoint_path=None):
     args = root_cmd
     args = args + ["--sam_model_type", model_type]
     args = args + ["--batch_size", str(batch_size)]
@@ -97,6 +98,8 @@ def run_experiment(idx,
     args = args + extra_args
     if print_header:
         args = args + ["--print_header", "True"]
+    if custom_checkpoint_path:
+        args = args + ["--custom_checkpoint_path", custom_checkpoint_path]
     import time
     t0 = time.time()
     result = subprocess.run(args, capture_output=capture_output)
@@ -158,8 +161,8 @@ def run_traces(*args, **kwargs):
 
 print_header = True
 # for bs, model in itertools.product([1, 32, 64], ["vit_b", "vit_h"]):
-for bs, model in itertools.product([32, 64], ["vit_b", "vit_h"]):
-    run_experiment("sparse",      "local-fork",   f"{model}_2x4_wanda", bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
+for bs, model in itertools.product([32], ["vit_b", "vit_h"]):
+    run_experiment("sparse",      "local-fork",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse", custom_checkpoint_path=f"sam_{model}_2x4_wanda.pth")
     print_header = False
 
     # run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header, capture_output=False)

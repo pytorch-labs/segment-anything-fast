@@ -290,6 +290,7 @@ def run(
     profile_top=False,
     memory_path=None,
     use_local_sam_fork=False,
+    custom_checkpoint_path=None,
 ):
     from torch._inductor import config as tritonconfig
     tritonconfig.triton.unique_kernel_names = True
@@ -314,19 +315,18 @@ def run(
         'vit_h': f'{sam_checkpoint_base_path}/sam_vit_h_4b8939.pth',
         'vit_l': f'{sam_checkpoint_base_path}/sam_vit_l_0b3195.pth',
         'vit_b': f'{sam_checkpoint_base_path}/sam_vit_b_01ec64.pth',
-        'vit_h_2x4_wanda': f'{sam_checkpoint_base_path}/sam_vit_h_2x4_wanda.pth',
-        'vit_l_2x4_wanda': f'{sam_checkpoint_base_path}/sam_vit_l_2x4_wanda.pth',
-        'vit_b_2x4_wanda': f'{sam_checkpoint_base_path}/sam_vit_b_2x4_wanda.pth',
     }
 
     if use_local_sam_fork:
         from local_segment_anything_fork import sam_model_registry, SamPredictor
     else:
         from segment_anything import sam_model_registry, SamPredictor
-    checkpoint_path = model_type_to_checkpoint[sam_model_type]
-    # this is a hack
-    sam_model_type = sam_model_type[:5]
-    print(sam_model_type)
+
+    if custom_checkpoint_path is None:
+        checkpoint_path = model_type_to_checkpoint[sam_model_type]
+    else:
+        checkpoint_path = f'{sam_checkpoint_base_path}/{custom_checkpoint_path}'
+
     sam = sam_model_registry[sam_model_type](checkpoint=checkpoint_path).cuda()
     predictor = SamPredictor(sam)
 
