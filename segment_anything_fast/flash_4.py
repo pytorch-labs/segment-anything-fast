@@ -218,8 +218,9 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
 
 
 def _load_best_configs():
-    from pathlib import Path
-    saved_configs = Path("flash_4_configs_a100.p")
+    import importlib
+    saved_configs = importlib.resources.files("segment_anything_fast")
+    saved_configs = saved_configs / "configs" / "flash_4_configs_a100.p"
     if saved_configs.is_file():
         import pickle
         with open(saved_configs, 'rb') as f:
@@ -228,8 +229,9 @@ def _load_best_configs():
 
 
 def _save_best_configs(best_configs):
-    from pathlib import Path
-    saved_configs = Path("flash_4_configs_a100.p")
+    import importlib
+    saved_configs = importlib.resources.files("segment_anything_fast")
+    saved_configs = saved_configs / "configs" / "flash_4_configs_a100.p"
     with open(saved_configs, 'wb') as f:
         import pickle
         print(f"Saving best configs to file {saved_configs}")

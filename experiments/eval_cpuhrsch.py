@@ -5,13 +5,6 @@ import itertools
 
 home = "/home/cpuhrsch"
 
-python_path = os.path.join(
-    # home, "miniconda3/envs/pytorch-3.10-nightly20230727/bin/python")
-    home, "miniconda3/envs/pytorch-3.10-source/bin/python")
-
-script_path = os.path.join(
-    home, "dev/segment-anything-fast/saf/eval_combo.py")
-
 sam_path = os.path.join(home, "dev/segment-anything")
 sam_commits = {
         "default": "6fdee8f2727f4506cfbbe553e23b895e27956588",
@@ -33,7 +26,7 @@ def change_sam_commit(commit_name):
     result = subprocess.run(root_cmd + ["rev-parse", "HEAD"], capture_output=True)
     assert result.returncode == 0
 
-root_cmd = [python_path, script_path,
+root_cmd = ["python", "eval_combo.py",
             "--coco_root_dir",
             os.path.join(home, "datasets/coco2017"),
             "--coco_slice_name",
@@ -64,7 +57,7 @@ def run_experiment(idx,
                    use_nested_tensor=False,
                    extra_args=None,
                    print_header=False,
-                   capture_output=True,
+                   capture_output=False,
                    limit=None,
                    profile_path=None,
                    profile_top=False,
@@ -143,7 +136,7 @@ def run_traces(*args, **kwargs):
     kwargs['memory_path'] = None
 
     # Convert memory trace to html page
-    conversion_cmd = [python_path, "/home/cpuhrsch/dev/pytorch/torch/cuda/_memory_viz.py", "trace_plot", memory_path + ".pickle", "-o", memory_path + ".html"]
+    conversion_cmd = ["python", "/home/cpuhrsch/dev/pytorch/torch/cuda/_memory_viz.py", "trace_plot", memory_path + ".pickle", "-o", memory_path + ".html"]
     result = subprocess.run(conversion_cmd, capture_output=True)
     assert result.returncode == 0
 
