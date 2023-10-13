@@ -25,7 +25,7 @@ That means the very last bar is the combination of
 - Dynamic int8 symmetric quantization
 - 2:4 sparse format
 
-![High level results](bar_chart.svg)
+![High level results](experiments/bar_chart.svg)
 
 ## License
 
