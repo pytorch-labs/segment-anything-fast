@@ -162,7 +162,7 @@ def run_traces(*args, **kwargs):
 print_header = True
 # for bs, model in itertools.product([1, 32, 64], ["vit_b", "vit_h"]):
 for bs, model in itertools.product([32], ["vit_b", "vit_h"]):
-    run_experiment("sparse",      "local-fork",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse", custom_checkpoint_path=f"sam_{model}_2x4_wanda.pth")
+    run_experiment("sparse",      "local-fork",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse", custom_checkpoint_path=f"{model}_2x4_wanda.pth")
     print_header = False
 
     # run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header, capture_output=False)

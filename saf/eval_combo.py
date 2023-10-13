@@ -326,6 +326,7 @@ def run(
         checkpoint_path = model_type_to_checkpoint[sam_model_type]
     else:
         checkpoint_path = f'{sam_checkpoint_base_path}/{custom_checkpoint_path}'
+        print(checkpoint_path)
 
     sam = sam_model_registry[sam_model_type](checkpoint=checkpoint_path).cuda()
     predictor = SamPredictor(sam)
