@@ -340,10 +340,10 @@ def run(
         block.attn.use_rel_pos = use_rel_pos
 
     if compress == "dynamic_quant":
-        from dynamic_quant import apply_dynamic_quant
+        from segment_anything_fast.dynamic_quant import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
     elif compress == "static_quant":
-        from static_quant import apply_static_quant
+        from segment_anything_fast.static_quant import apply_static_quant
         apply_static_quant(predictor.model.image_encoder)
         from pathlib import Path
         weights_path = Path(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
@@ -353,10 +353,10 @@ def run(
             from static_quant import set_x_absmax
             set_x_absmax(predictor.model.image_encoder, weights)
     elif compress == "sparse":
-        from sparse import apply_sparse
+        from segment_anything_fast.sparse import apply_sparse
         apply_sparse(predictor.model.image_encoder)
     elif compress == "int4_dynamic_quant_sparse":
-        from dynamic_quant_sparse import apply_int4_dynamic_quant_sparse
+        from segment_anything_fast.dynamic_quant_sparse import apply_int4_dynamic_quant_sparse
         apply_int4_dynamic_quant_sparse(predictor.model.image_encoder)
     elif compress == "static_quant_sparse":
         raise NotImplementedError(f"Unsupported compress {compress}")

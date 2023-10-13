@@ -123,8 +123,9 @@ def _autotune(configs, function):
     return best, best_config
 
 def _load_best_configs():
-    from pathlib import Path
-    saved_configs = Path("int_mm_configs_a100.p")
+    import importlib
+    saved_configs = importlib.resources.files("segment_anything_fast")
+    saved_configs = saved_configs / "configs" / "int_mm_configs_a100.p"
     if saved_configs.is_file():
         import pickle
         with open(saved_configs, 'rb') as f:
@@ -132,8 +133,9 @@ def _load_best_configs():
             return pickle.load(f)
 
 def _save_best_configs(best_configs):
-    from pathlib import Path
-    saved_configs = Path("int_mm_configs_a100.p")
+    import importlib
+    saved_configs = importlib.resources.files("segment_anything_fast")
+    saved_configs = saved_configs / "configs" / "int_mm_configs_a100.p"
     with open(saved_configs, 'wb') as f:
         import pickle
         print(f"Saving best configs to file {saved_configs}")
