@@ -64,8 +64,8 @@ def run_experiment(idx,
                    use_nested_tensor=False,
                    extra_args=None,
                    print_header=False,
-                   capture_output=False,
-                   limit=5,
+                   capture_output=True,
+                   limit=None,
                    profile_path=None,
                    profile_top=False,
                    memory_path=None):
@@ -160,10 +160,9 @@ print_header = True
 # for bs, model in itertools.product([1, 32, 64], ["vit_b", "vit_h"]):
 for bs, model in itertools.product([32, 64], ["vit_b", "vit_h"]):
     run_experiment("sparse",      "local-fork",   f"{model}_2x4_wanda", bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
+    print_header = False
 
-import sys; sys.exit(0)
     # run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header, capture_output=False)
-    # print_header = False
     # run_experiment("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
 
     # run_experiment("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")

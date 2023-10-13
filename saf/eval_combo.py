@@ -326,6 +326,7 @@ def run(
     checkpoint_path = model_type_to_checkpoint[sam_model_type]
     # this is a hack
     sam_model_type = sam_model_type[:5]
+    print(sam_model_type)
     sam = sam_model_registry[sam_model_type](checkpoint=checkpoint_path).cuda()
     predictor = SamPredictor(sam)
 
