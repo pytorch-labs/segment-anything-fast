@@ -57,7 +57,7 @@ def run_experiment(idx,
                    use_nested_tensor=False,
                    extra_args=None,
                    print_header=False,
-                   capture_output=False,
+                   capture_output=True,
                    limit=None,
                    profile_path=None,
                    profile_top=False,
@@ -150,7 +150,7 @@ def run_traces(*args, **kwargs):
 # run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
 print_header = True
-for bs, model in itertools.product([1, 32, 64], ["vit_b", "vit_h"]):
+for bs, model in itertools.product([1, 32], ["vit_b", "vit_h"]):
     run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header)
     print_header = False
     run_experiment("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
