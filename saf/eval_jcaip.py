@@ -64,7 +64,7 @@ def run_experiment(idx,
                    use_nested_tensor=False,
                    extra_args=None,
                    print_header=False,
-                   capture_output=True,
+                   capture_output=False,
                    limit=5,
                    profile_path=None,
                    profile_top=False,
@@ -158,16 +158,19 @@ def run_traces(*args, **kwargs):
 
 print_header = True
 # for bs, model in itertools.product([1, 32, 64], ["vit_b", "vit_h"]):
-for bs, model in itertools.product([1, 32, 64], ["vit_h"]):
-    run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header, capture_output=False)
-    print_header = False
-    run_experiment("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
-
-    run_experiment("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-    run_experiment("SDPA",        "sdpa-decoder",                model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-    run_experiment("Triton",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-    if bs > 1:
-        run_experiment("NT",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1))
-    run_experiment("int8",        "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant")
+for bs, model in itertools.product([32, 64], ["vit_b", "vit_h"]):
     run_experiment("sparse",      "local-fork",   f"{model}_2x4_wanda", bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
+
+import sys; sys.exit(0)
+    # run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header, capture_output=False)
+    # print_header = False
+    # run_experiment("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
+
+    # run_experiment("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
+    # run_experiment("SDPA",        "sdpa-decoder",                model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
+    # run_experiment("Triton",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
+    # if bs > 1:
+    #     run_experiment("NT",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1))
+    # run_experiment("int8",        "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant")
+    # run_experiment("sparse",      "local-fork",   f"{model}_2x4_wanda", bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
     # run_experiment("sparse_int8", "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="int4_dynamic_quant_sparse")

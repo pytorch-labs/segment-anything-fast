@@ -325,7 +325,8 @@ def run(
         from segment_anything import sam_model_registry, SamPredictor
     checkpoint_path = model_type_to_checkpoint[sam_model_type]
     # this is a hack
-    sam = sam_model_registry[sam_model_type[:5]](checkpoint=checkpoint_path).cuda()
+    sam_model_type = sam_model_type[:5]
+    sam = sam_model_registry[sam_model_type](checkpoint=checkpoint_path).cuda()
     predictor = SamPredictor(sam)
 
     def prep_model(model, use_half):
