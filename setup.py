@@ -4,7 +4,7 @@ packages = find_packages()
 print("packages: ", packages)
 setup(
     name='segment-anything-fast',
-    version='0.1',
+    version='0.2',
     packages=packages,
     install_requires=[
         'torch',
