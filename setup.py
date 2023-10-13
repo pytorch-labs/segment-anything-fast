@@ -1,9 +1,11 @@
 from setuptools import setup, find_packages
 
+packages = find_packages()
+print("packages: ", packages)
 setup(
     name='segment-anything-fast',
-    version='0.1',
-    packages=find_packages(),
+    version='0.2',
+    packages=packages,
     install_requires=[
         'torch',
         'diskcache',
@@ -11,9 +13,13 @@ setup(
         'scipy',
         'scikit-image',
     ],
+    data_files=[
+        "segment_anything_fast/configs/flash_4_configs_a100.p",
+        "segment_anything_fast/configs/int_mm_configs_a100.p",
+    ],
     description='A pruned, quantized, compiled, nested and batched implementation of nested tensor',
     long_description_content_type='text/markdown',
-    url='https://github.com/yourusername/segment-anything-fast',
+    url='https://github.com/pytorch-labs/segment-anything-fast',
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',

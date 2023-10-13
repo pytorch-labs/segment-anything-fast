@@ -317,7 +317,7 @@ def run(
     }
 
     if use_local_sam_fork:
-        from local_segment_anything_fork import sam_model_registry, SamPredictor
+        from segment_anything_fast import sam_model_registry, SamPredictor
     else:
         from segment_anything import sam_model_registry, SamPredictor
     checkpoint_path = model_type_to_checkpoint[sam_model_type]

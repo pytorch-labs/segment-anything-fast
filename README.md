@@ -1,5 +1,7 @@
 # Segment anything ... Fast
 
+This work is based on a fork of https://github.com/facebookresearch/segment-anything
+
 
 ## Dependencies
 
