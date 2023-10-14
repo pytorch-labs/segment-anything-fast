@@ -17,7 +17,7 @@ setup(
         "segment_anything_fast/configs/flash_4_configs_a100.p",
         "segment_anything_fast/configs/int_mm_configs_a100.p",
     ],
-    description='A pruned, quantized, compiled, nested and batched implementation of nested tensor',
+    description='A pruned, quantized, compiled, nested and batched implementation of segment-anything',
     long_description_content_type='text/markdown',
     url='https://github.com/pytorch-labs/segment-anything-fast',
     classifiers=[
