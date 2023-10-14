@@ -5,7 +5,7 @@ import itertools
 
 home = "/home/cpuhrsch"
 
-sam_path = os.path.join(home, "dev/segment-anything")
+sam_path = "/scratch/cpuhrsch/dev/segment-anything"
 sam_commits = {
         "default": "6fdee8f2727f4506cfbbe553e23b895e27956588",
         "graphbreaks": "55f772f77864752f2e98a6fc7713b45a1843c167",
@@ -28,17 +28,17 @@ def change_sam_commit(commit_name):
 
 root_cmd = ["python", "eval_combo.py",
             "--coco_root_dir",
-            os.path.join(home, "datasets/coco2017"),
+            "experiments_data/datasets/coco2017",
             "--coco_slice_name",
             "val2017",
             "--sam_checkpoint_base_path",
-            os.path.join(home, "checkpoints/sam"),
+            "experiments_data/checkpoints",
             "--sam_model_type",
             "vit_b",
             "--point_sampling_cache_dir",
-            os.path.join(home, "tmp/sam_coco_mask_center_cache"),
+            "experiments_data/tmp/sam_coco_mask_center_cache",
             "--mask_debug_out_dir",
-            os.path.join(home, "tmp/sam_eval_masks_out")]
+            "experiments_data/tmp/sam_eval_masks_out"]
 
 # TODO:
 # Make use_compile write out the mode
