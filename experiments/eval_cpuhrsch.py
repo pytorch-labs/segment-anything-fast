@@ -159,8 +159,8 @@ for bs, model in itertools.product([1, 32], ["vit_b", "vit_h"]):
     run_experiment("Triton",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
     if bs > 1:
         run_experiment("NT",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1))
-    run_experiment("int8",        "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant", capture_output=False)
-    run_experiment("sparse",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse", capture_output=False)
+    run_experiment("int8",        "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant")
+    run_experiment("sparse",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
     run_experiment("sparse_fp16", "local-fork",                  model, bs, 32, use_half="float16",   use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
     run_experiment("sparse_int8", "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="int4_dynamic_quant_sparse")
 
