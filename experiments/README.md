@@ -14,3 +14,14 @@ Need to download
 
 wget http://images.cocodataset.org/zips/val2017.zip
 wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+
+## Folder structure of experimental data
+
+experiments_data/tmp
+experiments_data/tmp/sam_coco_mask_center_cache
+experiments_data/tmp/sam_eval_masks_out
+experiments_data/datasets
+experiments_data/datasets/coco2017
+experiments_data/datasets/coco2017/val2017
+experiments_data/datasets/coco2017/annotations
+experiments_data/checkpoints
