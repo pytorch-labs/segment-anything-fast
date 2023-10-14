@@ -28,17 +28,17 @@ def change_sam_commit(commit_name):
 
 root_cmd = ["python", "eval_combo.py",
             "--coco_root_dir",
-            "datasets/coco2017",
+            "experiments_data/datasets/coco2017",
             "--coco_slice_name",
             "val2017",
             "--sam_checkpoint_base_path",
-            "checkpoints",
+            "experiments_data/checkpoints",
             "--sam_model_type",
             "vit_b",
             "--point_sampling_cache_dir",
-            "tmp/sam_coco_mask_center_cache",
+            "experiments_data/tmp/sam_coco_mask_center_cache",
             "--mask_debug_out_dir",
-            "tmp/sam_eval_masks_out"]
+            "experiments_data/tmp/sam_eval_masks_out"]
 
 # TODO:
 # Make use_compile write out the mode
@@ -150,18 +150,18 @@ def run_traces(*args, **kwargs):
 # run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
 
 print_header = True
-for bs, model in itertools.product([1, 32], ["vit_b", "vit_h"]):
-    run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header)
-    print_header = False
-    run_experiment("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
-    run_experiment("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-    run_experiment("SDPA",        "sdpa-decoder",                model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-    run_experiment("Triton",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-    if bs > 1:
-        run_experiment("NT",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1))
+for bs, model in itertools.product([32], ["vit_b", "vit_h"]):
+    # run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header)
+    # print_header = False
+    # run_experiment("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
+    # run_experiment("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
+    # run_experiment("SDPA",        "sdpa-decoder",                model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
+    # run_experiment("Triton",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
+    # if bs > 1:
+    #     run_experiment("NT",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1))
     run_experiment("int8",        "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant", capture_output=False)
-    run_experiment("sparse",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse", capture_output=False)
     import sys; sys.exit(1)
+    run_experiment("sparse",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse", capture_output=False)
     run_experiment("sparse_fp16", "local-fork",                  model, bs, 32, use_half="float16",   use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
     run_experiment("sparse_int8", "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="int4_dynamic_quant_sparse")
 
