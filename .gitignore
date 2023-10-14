@@ -6,6 +6,8 @@
 # aten/build/ will stop being cleaned.  So be careful when
 # refactoring this file!
 
+experiments/checkpoints/*
+
 ## PyTorch
 
 .coverage
