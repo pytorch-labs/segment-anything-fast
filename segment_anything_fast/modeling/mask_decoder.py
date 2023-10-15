@@ -92,22 +92,23 @@ class MaskDecoder(nn.Module):
           torch.Tensor: batched predictions of mask quality
         """
 
+        self_dtype = self.iou_prediction_head.layers[0].weight.dtype
         if sparse_prompt_embeddings.is_nested:
             assert dense_prompt_embeddings.is_nested
             assert multimask_output
             masks, iou_pred = self.predict_masks_nested(
                 image_embeddings=image_embeddings,
                 image_pe=image_pe,
-                sparse_prompt_embeddings=sparse_prompt_embeddings,
-                dense_prompt_embeddings=dense_prompt_embeddings,
+                sparse_prompt_embeddings=sparse_prompt_embeddings.to(self_dtype),
+                dense_prompt_embeddings=dense_prompt_embeddings.to(self_dtype),
             )
             return masks, iou_pred
         else:
             masks, iou_pred = self.predict_masks(
                 image_embeddings=image_embeddings,
                 image_pe=image_pe,
-                sparse_prompt_embeddings=sparse_prompt_embeddings,
-                dense_prompt_embeddings=dense_prompt_embeddings,
+                sparse_prompt_embeddings=sparse_prompt_embeddings.to(self_dtype),
+                dense_prompt_embeddings=dense_prompt_embeddings.to(self_dtype),
             )
 
         # Select the correct mask or masks for output
@@ -121,6 +122,8 @@ class MaskDecoder(nn.Module):
         if sparse_prompt_embeddings.is_nested:
             return masks, iou_pred, offsets
 
+        if sparse_prompt_embeddings.dtype != self_dtype:
+            return masks.to(sparse_prompt_embeddings.dtype), iou_pred.to(sparse_prompt_embeddings.dtype)
         # Prepare output
         return masks, iou_pred
 

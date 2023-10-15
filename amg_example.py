@@ -22,7 +22,8 @@ image = cv2.imread('dog.jpg')
 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 
-from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
+from segment_anything_fast import sam_model_registry
+from segment_anything import SamAutomaticMaskGenerator, SamPredictor
 
 sam_checkpoint = "/scratch/cpuhrsch/checkpoints/sam_vit_h_4b8939.pth"
 model_type = "vit_h"
@@ -30,7 +31,7 @@ model_type = "vit_h"
 device = "cuda"
 
 sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
-sam.to(device=device)
+sam.to(device=device, dtype=torch.bfloat16)
 
 mask_generator = SamAutomaticMaskGenerator(sam)
 
@@ -41,4 +42,4 @@ plt.imshow(image)
 show_anns(masks)
 plt.axis('off')
 plt.tight_layout()
-plt.savefig('dog_mask.png', format='png')
+plt.savefig('dog_mask_fast.png', format='png')
