@@ -36,7 +36,7 @@ mask_generator = SamAutomaticMaskGenerator(sam)
 
 masks = mask_generator.generate(image)
 
-plt.figure(figsize=(image.shape[0]/100., image.shape[1]/100.), dpi=100)
+plt.figure(figsize=(image.shape[1]/100., image.shape[0]/100.), dpi=100)
 plt.imshow(image)
 show_anns(masks)
 plt.axis('off')
