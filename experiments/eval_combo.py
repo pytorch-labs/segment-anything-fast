@@ -325,7 +325,8 @@ def run(
     sam = sam_model_registry[sam_model_type](checkpoint=checkpoint_path).cuda()
     predictor = SamPredictor(sam)
 
-    segment_anything_fast.utils.apply_eval_dtype_predictor(predictor, use_half)
+    from segment_anything_fast import tools
+    tools.apply_eval_dtype_predictor(predictor, use_half)
 
     for block in predictor.model.image_encoder.blocks:
         block.attn.use_rel_pos = use_rel_pos
