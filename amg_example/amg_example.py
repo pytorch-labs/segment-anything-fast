@@ -31,10 +31,10 @@ model_type = "vit_h"
 device = "cuda"
 
 sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
-sam.to(device=device, dtype=torch.bfloat16)
+sam.to(device=device)
 
 mask_generator = SamAutomaticMaskGenerator(sam)
-mask_generator.predictor = apply_eval_dtype_predictor(mask_generator.predictor)
+mask_generator.predictor = apply_eval_dtype_predictor(mask_generator.predictor, torch.bfloat16)
 
 masks = mask_generator.generate(image)
 
