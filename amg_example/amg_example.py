@@ -25,7 +25,7 @@ image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 from segment_anything_fast import sam_model_registry
 from segment_anything import SamAutomaticMaskGenerator, SamPredictor
 
-sam_checkpoint = "/scratch/cpuhrsch/checkpoints/sam_vit_h_4b8939.pth"
+sam_checkpoint = "checkpoints/sam_vit_h_4b8939.pth"
 model_type = "vit_h"
 
 device = "cuda"

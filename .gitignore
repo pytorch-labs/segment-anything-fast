@@ -9,6 +9,7 @@
 experiments/experiments_data/checkpoints/*
 experiments/experiments_data/tmp/*
 experiments/experiments_data/datasets/*
+amg_example/checkpoints/*
 
 ## PyTorch
 
