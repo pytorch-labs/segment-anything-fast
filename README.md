@@ -5,10 +5,15 @@ This work is based on a fork of https://github.com/facebookresearch/segment-anyt
 
 ## Dependencies
 
-PyTorch branch: https://github.com/pytorch/pytorch
+Latest PyTorch nightly
 
-SegmentAnything fork: https://github.com/cpuhrsch/segment-anything
 
+For example:
+```
+pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu121
+```
+
+Installation instructions vary by platform. Please see the website https://pytorch.org/
 
 ## Results
 
