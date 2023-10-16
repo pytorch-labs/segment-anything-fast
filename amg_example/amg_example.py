@@ -22,8 +22,8 @@ image = cv2.imread('dog.jpg')
 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 
-from segment_anything_fast import sam_model_registry
-from segment_anything import SamAutomaticMaskGenerator, SamPredictor
+from segment_anything_fast import sam_model_registry, SamAutomaticMaskGenerator
+from segment_anything_fast.tools import apply_eval_dtype_predictor
 
 sam_checkpoint = "checkpoints/sam_vit_h_4b8939.pth"
 model_type = "vit_h"
@@ -34,6 +34,7 @@ sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
 sam.to(device=device, dtype=torch.bfloat16)
 
 mask_generator = SamAutomaticMaskGenerator(sam)
+mask_generator.predictor = apply_eval_dtype_predictor(mask_generator.predictor)
 
 masks = mask_generator.generate(image)
 
