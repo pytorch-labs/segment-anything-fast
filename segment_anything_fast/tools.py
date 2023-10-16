@@ -21,7 +21,7 @@ def replace_with_custom_fn_if_matches_filter(
 
 def apply_eval_dtype_predictor(predictor, dtype=None):
 
-    def prep_model(model):
+    def prep_model(model, dtype):
         if dtype is not None:
             return model.eval().to(dtype)
         return model.eval()
