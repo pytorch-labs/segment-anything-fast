@@ -7,24 +7,28 @@ home = "/home/cpuhrsch"
 
 sam_path = "/scratch/cpuhrsch/dev/segment-anything"
 sam_commits = {
-        "default": "6fdee8f2727f4506cfbbe553e23b895e27956588",
-        "graphbreaks": "55f772f77864752f2e98a6fc7713b45a1843c167",
-        "codesign": "50cb459d080bcd783a4b481d3bde4150d35ac497",
-        "sdpa": "22f654553bbe7aa28337ce34a25f1a9d27cee111",
-        "sdpa-decoder": "7dc75fdf283693f73606f2fe7fdcb693afcb16b9",
-        "predict-masks-nested": "187e2359f9eb3b00d43487a1ec3db849964753e4",
-        "use-rel-pos": "d2fa29d580eaf7928eef702cd71d133b943c30cf",
-        "hacky-nested-encoder": "8f2fc3cc90b222a2431d4c43379282e36f021b69",
-        "wip-flash-nested": "e01edb904a49c449425fca9e48902824b22cf764",
-        "wip-flash-sdpa-decoder": "bb1c8b6f3749b1a5f31635f5d2f26bcafa9d94f9"}
+    "default": "6fdee8f2727f4506cfbbe553e23b895e27956588",
+    "graphbreaks": "55f772f77864752f2e98a6fc7713b45a1843c167",
+    "codesign": "50cb459d080bcd783a4b481d3bde4150d35ac497",
+    "sdpa": "22f654553bbe7aa28337ce34a25f1a9d27cee111",
+    "sdpa-decoder": "7dc75fdf283693f73606f2fe7fdcb693afcb16b9",
+    "predict-masks-nested": "187e2359f9eb3b00d43487a1ec3db849964753e4",
+    "use-rel-pos": "d2fa29d580eaf7928eef702cd71d133b943c30cf",
+    "hacky-nested-encoder": "8f2fc3cc90b222a2431d4c43379282e36f021b69",
+    "wip-flash-nested": "e01edb904a49c449425fca9e48902824b22cf764",
+    "wip-flash-sdpa-decoder": "bb1c8b6f3749b1a5f31635f5d2f26bcafa9d94f9"}
+
 
 def change_sam_commit(commit_name):
     assert commit_name in sam_commits
     root_cmd = ["git", "-C", sam_path]
-    result = subprocess.run(root_cmd + ["checkout", sam_commits[commit_name]], capture_output=True)
+    result = subprocess.run(
+        root_cmd + ["checkout", sam_commits[commit_name]], capture_output=True)
     assert result.returncode == 0
-    result = subprocess.run(root_cmd + ["rev-parse", "HEAD"], capture_output=True)
+    result = subprocess.run(
+        root_cmd + ["rev-parse", "HEAD"], capture_output=True)
     assert result.returncode == 0
+
 
 root_cmd = ["python", "eval_combo.py",
             "--coco_root_dir",
@@ -39,11 +43,6 @@ root_cmd = ["python", "eval_combo.py",
             "experiments_data/tmp/sam_coco_mask_center_cache",
             "--mask_debug_out_dir",
             "experiments_data/tmp/sam_eval_masks_out"]
-
-# TODO:
-# Make use_compile write out the mode
-# Use max-autotune for everything
-# Make epilogue fusion first a column
 
 
 def run_experiment(idx,
@@ -98,7 +97,8 @@ def run_experiment(idx,
     t1 = time.time()
     import torch
     pytorch_version = torch.__version__
-    prefix = ",".join(map(str, [idx, (t1 - t0)/60.0, sam_commit_name, pytorch_version]))
+    prefix = ",".join(
+        map(str, [idx, (t1 - t0)/60.0, sam_commit_name, pytorch_version]))
     if result.returncode != 0:
         print(prefix + ",ERROR")
         return
@@ -107,8 +107,6 @@ def run_experiment(idx,
         print("technique,time,sam_commit_name,pytorch_version," + header)
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
-# TODO: Accuracy numbers for static quantization are not reliable and rely on using first 10 batches of data to build scales.
-# Need to use a held out set of data to build these scalars.
 
 def run_traces(*args, **kwargs):
     # Limit to 10 batches
@@ -136,7 +134,8 @@ def run_traces(*args, **kwargs):
     kwargs['memory_path'] = None
 
     # Convert memory trace to html page
-    conversion_cmd = ["python", "/home/cpuhrsch/dev/pytorch/torch/cuda/_memory_viz.py", "trace_plot", memory_path + ".pickle", "-o", memory_path + ".html"]
+    conversion_cmd = ["python", "/home/cpuhrsch/dev/pytorch/torch/cuda/_memory_viz.py",
+                      "trace_plot", memory_path + ".pickle", "-o", memory_path + ".html"]
     result = subprocess.run(conversion_cmd, capture_output=True)
     assert result.returncode == 0
 
@@ -147,7 +146,7 @@ def run_traces(*args, **kwargs):
 # run_traces("Triton",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
 # run_traces("NT",             "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
 # run_traces("int8",           "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
-# run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="int4_dynamic_quant_sparse")
+# run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="sparse")
 
 print_header = True
 for bs, model in itertools.product([1, 32], ["vit_b", "vit_h"]):
@@ -161,15 +160,3 @@ for bs, model in itertools.product([1, 32], ["vit_b", "vit_h"]):
         run_experiment("NT",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1))
     run_experiment("int8",        "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant")
     run_experiment("sparse",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
-    run_experiment("sparse_fp16", "local-fork",                  model, bs, 32, use_half="float16",   use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
-    run_experiment("sparse_int8", "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="int4_dynamic_quant_sparse")
-
-# -- Static quant
-# run_traces("static",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
-# for bs in [1, 8, 16, 32, 64, 128, 256]:
-#     run_experiment("static",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=True, compress="static_quant")
-#     run_experiment("static",     "local-fork",                  "vit_b", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
-#     run_experiment("static",     "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=True, compress="static_quant")
-#     run_experiment("static",     "local-fork",                  "vit_l", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
-#     run_experiment("static",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune-no-cudagraphs", use_nested_tensor=True, compress="static_quant")
-#     run_experiment("static",     "local-fork",                  "vit_h", bs, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="static_quant")
