@@ -7,16 +7,17 @@ setup(
     version='0.2',
     packages=packages,
     install_requires=[
-        'torch',
+        'torch>=2.2.0.dev20231015',
+        'torchvision>=0.17.0.dev20231015',
         'diskcache',
         'pycocotools',
         'scipy',
         'scikit-image',
     ],
-    data_files=[
-        "segment_anything_fast/configs/flash_4_configs_a100.p",
-        "segment_anything_fast/configs/int_mm_configs_a100.p",
-    ],
+    include_package_data=True,
+    package_data={
+        'segment_anything_fast.configs': ["*.p"],
+    },
     description='A pruned, quantized, compiled, nested and batched implementation of segment-anything',
     long_description_content_type='text/markdown',
     url='https://github.com/pytorch-labs/segment-anything-fast',
