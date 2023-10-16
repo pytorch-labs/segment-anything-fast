@@ -157,10 +157,13 @@ class PromptEncoder(nn.Module):
           torch.Tensor: dense embeddings for the masks, in the shape
             Bx(embed_dim)x(embed_H)x(embed_W)
         """
+        return_dtype = None
         bs = self._get_batch_size(points, boxes, masks)
         if points is not None:
             coords, labels = points
             sparse_embeddings = self._embed_points(coords, labels, pad=(boxes is None))
+            if sparse_embeddings.dtype != coords.dtype:
+                return_dtype = coords.dtype
         if boxes is not None:
             sparse_embeddings = self._embed_boxes(boxes)
 
@@ -180,7 +183,10 @@ class PromptEncoder(nn.Module):
                 dense_embeddings = self.no_mask_embed.weight.reshape(1, -1, 1, 1).expand(
                     bs, -1, self.image_embedding_size[0], self.image_embedding_size[1])
 
-        return sparse_embeddings.to(dense_embeddings.dtype), dense_embeddings
+        r0, r1 = sparse_embeddings.to(dense_embeddings.dtype), dense_embeddings
+        if return_dtype is None:
+            return r0, r1
+        return r0.to(return_dtype), r1.to(return_dtype)
 
 
 class PositionEmbeddingRandom(nn.Module):
@@ -201,7 +207,7 @@ class PositionEmbeddingRandom(nn.Module):
         """Positionally encode points that are normalized to [0,1]."""
         # assuming coords are in [0, 1]^2 square and have d_1 x ... x d_n x 2 shape
         coords = 2 * coords - 1
-        coords = coords @ self.positional_encoding_gaussian_matrix
+        coords = coords.to(self.positional_encoding_gaussian_matrix.dtype) @ self.positional_encoding_gaussian_matrix
         coords = 2 * np.pi * coords
         # outputs d_1 x ... x d_n x C shape
         return torch.cat([torch.sin(coords), torch.cos(coords)], dim=-1)
