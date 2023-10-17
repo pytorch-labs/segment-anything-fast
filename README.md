@@ -24,7 +24,7 @@ Step 2
 Install the package
 
 ```
-pip install ptl-segment-anything-fast
+pip install git+https://github.com/pytorch-labs/segment-anything-fast.git
 ```
 
 ## Usage
