@@ -3,9 +3,12 @@
 This work is based on a fork of https://github.com/facebookresearch/segment-anything
 
 
-## Dependencies
+## Installation
 
-Latest PyTorch nightly
+
+Step 1
+
+Get latest PyTorch nightly
 
 
 For example:
@@ -14,6 +17,15 @@ pip3 install --pre torch torchvision torchaudio --index-url https://download.pyt
 ```
 
 Installation instructions vary by platform. Please see the website https://pytorch.org/
+
+
+Step 2
+
+Install the package
+
+```
+pip install ptl-segment-anything-fast
+```
 
 ## Results
 
