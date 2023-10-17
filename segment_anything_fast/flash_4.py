@@ -14,6 +14,8 @@ attn_bias = (rel_h_ + rel_w_).view(q_.size(0), q_.size(1), rel_h_.size(2), rel_h
 
 We use attn_mask and attn_bias interchangeably.
 
+This modification was designed by Christian Puhrsch and Daniel Haziza
+
 """
 
 import torch
