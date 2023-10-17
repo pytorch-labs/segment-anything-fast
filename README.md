@@ -27,6 +27,14 @@ Install the package
 pip install ptl-segment-anything-fast
 ```
 
+## Usage
+
+The package acts like a drop-in replacement for segment-anything.
+
+So, for example, if you're currently doing `from segment_anything import sam_model_registry` you should be able to do `from segment_anything_fast import sam_model_registry`.
+
+Please don't be shy to open a Github issue if you're missing functionality or find an issue. Thank you.
+
 ## Results
 
 The results show a waterfall of techniques.
