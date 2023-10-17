@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 packages = find_packages()
 print("packages: ", packages)
 setup(
-    name='ptl-segment-anything-fast',
+    name='pytorch-labs-segment-anything-fast',
     version='0.2',
     packages=packages,
     install_requires=[
