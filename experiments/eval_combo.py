@@ -334,29 +334,11 @@ def run(
     if compress == "dynamic_quant":
         from segment_anything_fast.dynamic_quant import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
-    elif compress == "static_quant":
-        from segment_anything_fast.static_quant import apply_static_quant
-        apply_static_quant(predictor.model.image_encoder)
-        from pathlib import Path
-        weights_path = Path(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
-        if weights_path.exists() and weights_path.is_file():
-            print("Loading static quantization weights")
-            weights = torch.load(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
-            from static_quant import set_x_absmax
-            set_x_absmax(predictor.model.image_encoder, weights)
     elif compress == "sparse":
         from segment_anything_fast.sparse import apply_sparse
         apply_sparse(predictor.model.image_encoder)
-    elif compress == "int4_dynamic_quant_sparse":
-        from segment_anything_fast.dynamic_quant_sparse import apply_int4_dynamic_quant_sparse
-        apply_int4_dynamic_quant_sparse(predictor.model.image_encoder)
-    elif compress == "static_quant_sparse":
-        raise NotImplementedError(f"Unsupported compress {compress}")
-    elif compress == "sparse":
-        raise NotImplementedError(f"Unsupported compress {compress}")
     else:
         assert compress is None, f"Unsupported compress mode {compress}"
-
 
     coco_img_ids_, cat_id_to_cat, catIds, coco = setup_coco_img_ids(
         coco_root_dir, coco_slice_name, coco_category_names, img_id)
@@ -409,13 +391,6 @@ def run(
                                                               use_compile_decoder,
                                                               use_nested_tensor,
                                                               pad_input_image_batch)
-
-    if compress == "static_quant":
-        from static_quant import get_x_absmax
-        weights = get_x_absmax(predictor.model.image_encoder)
-        print("Saving static quantization weights")
-        torch.save(weights, f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
-
     results = [[r[0], r[1], r[2], r[3].item()] for r in results]
 
     img_s, batch_ms_batch_size = None, None
