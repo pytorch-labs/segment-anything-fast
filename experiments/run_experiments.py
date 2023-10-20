@@ -1,7 +1,7 @@
 import subprocess
-import os
-import math
+import fire
 import itertools
+import functools
 
 home = "/home/cpuhrsch"
 
@@ -30,22 +30,8 @@ def change_sam_commit(commit_name):
     assert result.returncode == 0
 
 
-root_cmd = ["python", "eval_combo.py",
-            "--coco_root_dir",
-            "experiments_data/datasets/coco2017",
-            "--coco_slice_name",
-            "val2017",
-            "--sam_checkpoint_base_path",
-            "experiments_data/checkpoints",
-            "--sam_model_type",
-            "vit_b",
-            "--point_sampling_cache_dir",
-            "experiments_data/tmp/sam_coco_mask_center_cache",
-            "--mask_debug_out_dir",
-            "experiments_data/tmp/sam_eval_masks_out"]
-
-
-def run_experiment(idx,
+def run_experiment(experiments_data,
+                   idx,
                    sam_commit_name,
                    model_type,
                    batch_size,
@@ -61,6 +47,19 @@ def run_experiment(idx,
                    profile_path=None,
                    profile_top=False,
                    memory_path=None):
+    root_cmd = ["python", "eval_combo.py",
+                "--coco_root_dir",
+                f"{experiments_data}/datasets/coco2017",
+                "--coco_slice_name",
+                "val2017",
+                "--sam_checkpoint_base_path",
+                f"{experiments_data}/checkpoints",
+                "--sam_model_type",
+                "vit_b",
+                "--point_sampling_cache_dir",
+                f"{experiments_data}/tmp/sam_coco_mask_center_cache",
+                "--mask_debug_out_dir",
+                f"{experiments_data}/tmp/sam_eval_masks_out"]
     args = root_cmd
     args = args + ["--sam_model_type", model_type]
     args = args + ["--batch_size", str(batch_size)]
@@ -139,24 +138,32 @@ def run_traces(*args, **kwargs):
     result = subprocess.run(conversion_cmd, capture_output=True)
     assert result.returncode == 0
 
-# run_traces("fp32",           "default",                     "vit_b", 16, 32, print_header=True)
-# run_traces("fp16",           "codesign",                    "vit_b", 16, 32, use_half=True)
-# run_traces("compile",        "codesign",                    "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
-# run_traces("SDPA",           "sdpa-decoder",                "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
-# run_traces("Triton",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
-# run_traces("NT",             "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
-# run_traces("int8",           "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
-# run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="sparse")
+def run(experiments_data=None):
+    if experiments_data is None:
+        experiments_data = "experiments_data"
 
-print_header = True
-for bs, model in itertools.product([1, 32], ["vit_b", "vit_h"]):
-    # run_experiment("fp32",        "default",                     model, bs, 32, print_header=print_header)
-    # print_header = False
-    # run_experiment("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
-    # run_experiment("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-    # run_experiment("SDPA",        "sdpa-decoder",                model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-    run_experiment("Triton",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-    if bs > 1:
-        run_experiment("NT",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1))
-    run_experiment("int8",        "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant")
-    run_experiment("sparse",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
+    # run_traces("fp32",           "default",                     "vit_b", 16, 32, print_header=True)
+    # run_traces("fp16",           "codesign",                    "vit_b", 16, 32, use_half=True)
+    # run_traces("compile",        "codesign",                    "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
+    # run_traces("SDPA",           "sdpa-decoder",                "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
+    # run_traces("Triton",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
+    # run_traces("NT",             "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
+    # run_traces("int8",           "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+    # run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="sparse")
+
+    rexp = functools.partial(run_experiment, experiments_data)
+    print_header = True
+    for bs, model in itertools.product([32], ["vit_b", "vit_h"]):
+        rexp("fp32",        "default",                     model, bs, 32, print_header=print_header)
+        print_header = False
+        rexp("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
+        rexp("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
+        rexp("SDPA",        "sdpa-decoder",                model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
+        rexp("Triton",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", capture_output=False)
+        if bs > 1:
+            rexp("NT",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1))
+        rexp("int8",        "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant")
+        rexp("sparse",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
+
+if __name__ == '__main__':
+    fire.Fire(run)
