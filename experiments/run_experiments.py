@@ -153,12 +153,12 @@ def run(experiments_data=None):
 
     rexp = functools.partial(run_experiment, experiments_data)
     print_header = True
-    for bs, model in itertools.product([32], ["vit_b", "vit_h"]):
-        rexp("fp32",        "default",                     model, bs, 32, print_header=print_header)
+    for bs, model in itertools.product([1, 32], ["vit_b", "vit_h"]):
+        # rexp("fp32",        "default",                     model, bs, 32, print_header=print_header)
         print_header = False
-        rexp("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
-        rexp("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-        rexp("SDPA",        "sdpa-decoder",                model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
+        # rexp("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
+        # rexp("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
+        # rexp("SDPA",        "sdpa-decoder",                model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
         rexp("Triton",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", capture_output=False)
         if bs > 1:
             rexp("NT",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1))
