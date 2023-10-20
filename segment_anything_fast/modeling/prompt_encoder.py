@@ -157,13 +157,10 @@ class PromptEncoder(nn.Module):
           torch.Tensor: dense embeddings for the masks, in the shape
             Bx(embed_dim)x(embed_H)x(embed_W)
         """
-        return_dtype = None
         bs = self._get_batch_size(points, boxes, masks)
         if points is not None:
             coords, labels = points
             sparse_embeddings = self._embed_points(coords, labels, pad=(boxes is None))
-            if sparse_embeddings.dtype != coords.dtype:
-                return_dtype = coords.dtype
         if boxes is not None:
             sparse_embeddings = self._embed_boxes(boxes)
 
@@ -183,10 +180,7 @@ class PromptEncoder(nn.Module):
                 dense_embeddings = self.no_mask_embed.weight.reshape(1, -1, 1, 1).expand(
                     bs, -1, self.image_embedding_size[0], self.image_embedding_size[1])
 
-        r0, r1 = sparse_embeddings.to(dense_embeddings.dtype), dense_embeddings
-        if return_dtype is None:
-            return r0, r1
-        return r0.to(return_dtype), r1.to(return_dtype)
+        return sparse_embeddings.to(dense_embeddings.dtype), dense_embeddings
 
 
 class PositionEmbeddingRandom(nn.Module):

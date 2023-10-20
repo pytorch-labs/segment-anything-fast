@@ -215,7 +215,7 @@ class SamPredictor:
             raise RuntimeError("An image must be set with .set_image(...) before mask prediction.")
 
         if point_coords is not None:
-            points = (point_coords, point_labels)
+            points = (point_coords.clone(), point_labels.clone())
         else:
             points = None
 
@@ -225,6 +225,8 @@ class SamPredictor:
             boxes=boxes,
             masks=mask_input,
         )
+        sparse_embeddings = sparse_embeddings.to(point_coords.dtype)
+        dense_embeddings = dense_embeddings.to(point_coords.dtype)
 
         # Predict masks
         low_res_masks, iou_predictions = self.model.mask_decoder(
