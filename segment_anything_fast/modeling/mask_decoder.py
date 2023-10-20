@@ -180,38 +180,29 @@ class MaskDecoder(nn.Module):
             torch.cat([self.iou_token.weight, self.mask_tokens.weight], dim=0))
         tokens = torch.cat([output_tokens, sparse_prompt_embeddings], dim=2)
 
-        # TODO: remove this and make sure offsets are propagated
-        offsets = tokens.offsets()
-
         src = dense_prompt_embeddings + image_embeddings.unsqueeze(1)
         pos_src = torch.zeros_like(src) + image_pe
-        b, c, h, w = src.values().shape
+        h, w = src.shape[-2:]
 
         # Run the transformer
-        # TODO: Run the full NTs through instead of just the buffers
-        hs, src = self.transformer(src.values(), pos_src.values(), tokens.values())
-        iou_token_out = hs[:, 0, :]
-        mask_tokens_out = hs[:, 1 : (1 + self.num_mask_tokens), :]
+        hs, src = self.transformer(src, pos_src, tokens)
+        iou_token_out = hs[..., 0, :]
+        mask_tokens_out = hs[..., 1 : (1 + self.num_mask_tokens), :]
 
         # Upscale mask embeddings and predict masks using the mask tokens
-        src = src.transpose(1, 2).view(b, c, h, w)
+        src = src.transpose(-2, -1).unflatten(-1, (h, w))
         upscaled_embedding = self.output_upscaling(src)
         hyper_in_list: List[torch.Tensor] = []
         for i in range(self.num_mask_tokens):
-            hyper_in_list.append(self.output_hypernetworks_mlps[i](mask_tokens_out[:, i, :]))
-        hyper_in = torch.stack(hyper_in_list, dim=1)
-        b, c, h, w = upscaled_embedding.shape
-        masks = (hyper_in @ upscaled_embedding.view(b, c, h * w)).view(b, -1, h, w)
+            hyper_in_list.append(self.output_hypernetworks_mlps[i](mask_tokens_out[..., i, :]))
+        hyper_in = torch.stack(hyper_in_list, dim=-2)
+        h, w = upscaled_embedding.shape[-2:]
+        masks = (hyper_in @ upscaled_embedding.flatten(-2)).unflatten(-1, (h, w))
 
         # Generate mask quality predictions
         iou_pred = self.iou_prediction_head(iou_token_out)
 
-        # TODO: No need to create NT by hand once we propagate it properly through Transformer
-        from torch.nested._internal.nested_tensor import NestedTensor
-        num_tensors = offsets.shape[0] - 1
-        masks_nt = NestedTensor(masks, offsets)
-        iou_pred_nt = NestedTensor(iou_pred, offsets)
-        return masks_nt, iou_pred_nt
+        return masks, iou_pred
 
 
 # Lightly adapted from
