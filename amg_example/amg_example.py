@@ -51,7 +51,9 @@ def run(sam_model_registry, SamAutomaticMaskGenerator, optimize=False):
         # Apply optimizations
         from segment_anything_fast.tools import apply_eval_dtype_predictor
         mask_generator.predictor = apply_eval_dtype_predictor(mask_generator.predictor, torch.bfloat16)
-        mask_generator.predictor.model.image_encoder = torch.compile(mask_generator.predictor.model.image_encoder, mode="max-autotune")
+        # mask_generator.predictor.model.image_encoder = torch.compile(mask_generator.predictor.model.image_encoder, mode="max-autotune")
+        mask_generator.predictor.model.prompt_encoder = torch.compile(mask_generator.predictor.model.prompt_encoder, mode="max-autotune")
+        mask_generator.predictor.model.mask_decoder = torch.compile(mask_generator.predictor.model.mask_decoder, mode="max-autotune")
     masks = mask_generator.generate(image)
     ms = benchmark_torch_function_in_microseconds(mask_generator.generate, image)
     print(f"Generating this mask takes {ms}ms. We set optimize to {optimize}.")
@@ -66,8 +68,8 @@ def run(sam_model_registry, SamAutomaticMaskGenerator, optimize=False):
     else:
         plt.savefig('dog_mask.png', format='png')
 
-from segment_anything import sam_model_registry, SamAutomaticMaskGenerator
-run(sam_model_registry, SamAutomaticMaskGenerator)
+# from segment_anything import sam_model_registry, SamAutomaticMaskGenerator
+# run(sam_model_registry, SamAutomaticMaskGenerator)
 
 from segment_anything_fast import sam_model_registry, SamAutomaticMaskGenerator
 run(sam_model_registry, SamAutomaticMaskGenerator, optimize=True)
