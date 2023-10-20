@@ -41,7 +41,7 @@ image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 
 def run(sam_model_registry, SamAutomaticMaskGenerator, optimize=False):
-    sam_checkpoint = "checkpoints/sam_vit_h_4b8939.pth"
+    sam_checkpoint = "/home/cpuhrsch/saf/experiments_data/checkpoints/sam_vit_h_4b8939.pth"
     model_type = "vit_h"
     device = "cuda"
     sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
