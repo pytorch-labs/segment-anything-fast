@@ -133,23 +133,19 @@ def run_traces_fn(traces_dir, pytorch_path, rexp, *args, **kwargs):
     conversion_cmd = ["python", f"{pytorch_path}/torch/cuda/_memory_viz.py",
                       "trace_plot", memory_path + ".pickle", "-o", memory_path + ".html"]
     result = subprocess.run(conversion_cmd, capture_output=True)
-    assert result.returncode == 0
 
 def run(batch_size,
         model,
-        experiments_data=None,
+        pytorch_path,
+        sam_path,
+        experiments_data,
         run_traces=False,
         run_experiments=False,
         traces_dir=None,
         num_workers=32,
         print_header=True):
 
-    pytorch_path = "/home/cpuhrsch/dev/pytorch"
-    sam_path = "/home/cpuhrsch/dev/segment-anything"
     assert model == "vit_b" or model == "vit_h"
-
-    if experiments_data is None:
-        experiments_data = "experiments_data"
 
     rexp = functools.partial(run_experiment,
                              experiments_data,
@@ -163,7 +159,7 @@ def run(batch_size,
         assert traces_dir is not None
         rt = functools.partial(run_traces_fn, traces_dir, pytorch_path, rexp)
 
-        rt("fp32",           "default", capture_output=False)
+        rt("fp32",           "default",      print_header=print_header)
         rt("fp16",           "codesign",     use_half="bfloat16")
         rt("compile",        "codesign",     use_half="bfloat16",  use_compile="max-autotune")
         rt("SDPA",           "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
@@ -174,9 +170,9 @@ def run(batch_size,
         rt("sparse",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=True, compress="sparse")
 
     if run_experiments:
-        rexp("fp32",         "default",      print_header=print_header, capture_output=False)
+        rexp("fp32",         "default",      print_header=print_header)
         print_header = False
-        rexp("bf16",         "codesign",     use_half="bfloat16")
+        rexp("bf16",         "codesign",     use_half="bfloat16", capture_output=False)
         rexp("compile",      "codesign",     use_half="bfloat16",  use_compile="max-autotune")
         rexp("SDPA",         "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
         rexp("Triton",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
