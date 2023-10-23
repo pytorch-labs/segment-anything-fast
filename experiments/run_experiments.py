@@ -172,7 +172,7 @@ def run(batch_size,
     if run_experiments:
         rexp("fp32",         "default",      print_header=print_header)
         print_header = False
-        rexp("bf16",         "codesign",     use_half="bfloat16", capture_output=False)
+        rexp("bf16",         "codesign",     use_half="bfloat16")
         rexp("compile",      "codesign",     use_half="bfloat16",  use_compile="max-autotune")
         rexp("SDPA",         "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
         rexp("Triton",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
