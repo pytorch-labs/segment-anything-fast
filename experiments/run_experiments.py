@@ -143,7 +143,8 @@ def run(batch_size,
         run_experiments=False,
         traces_dir=None,
         num_workers=32,
-        print_header=True):
+        print_header=True,
+        capture_output=True):
 
     assert model == "vit_b" or model == "vit_h"
 
@@ -152,7 +153,8 @@ def run(batch_size,
                              sam_path,
                              model,
                              batch_size=batch_size,
-                             num_workers=num_workers)
+                             num_workers=num_workers,
+                             capture_output=capture_output)
 
     print_header = True
     if run_traces:

@@ -1,3 +1,4 @@
+technique,time,sam_commit_name,pytorch_version,sam_model_type,batch_size,memory(MiB),memory(%),img_s(avg),batch_ms(avg)/batch_size,mIoU,use_compile,use_half,compress,epilogue_fusion_first,use_compile_decoder,use_nested_tensor,use_rel_pos,pad_input_image_batch,num_workers,num_batches,num_images,profile_path,memory_path
 fp32,0.5474530378977458,default,2.2.0.dev20231024+cu121,ERROR
 bf16,0.39942808548609415,codesign,2.2.0.dev20231024+cu121,ERROR
 compile,3.4121453801790875,codesign,2.2.0.dev20231024+cu121,ERROR
