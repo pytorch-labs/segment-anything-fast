@@ -1,9 +1,0 @@
-technique,time,sam_commit_name,pytorch_version,sam_model_type,batch_size,memory(MiB),memory(%),img_s(avg),batch_ms(avg)/batch_size,mIoU,use_compile,use_half,compress,epilogue_fusion_first,use_compile_decoder,use_nested_tensor,use_rel_pos,pad_input_image_batch,num_workers,num_batches,num_images,profile_path,memory_path
-fp32,0.5474530378977458,default,2.2.0.dev20231024+cu121,ERROR
-bf16,0.39942808548609415,codesign,2.2.0.dev20231024+cu121,ERROR
-compile,3.4121453801790875,codesign,2.2.0.dev20231024+cu121,ERROR
-SDPA,1.4333288232485453,sdpa-decoder,2.2.0.dev20231024+cu121,ERROR
-Triton,5.946119316418966,local-fork,2.2.0.dev20231024+cu121,vit_h,64,27562,68,22.6401701925902,44.16927927190607,0.5820036887609843,max-autotune,torch.bfloat16,None,False,False,False,True,True,32,77,4928,None,None
-NT,1.5700856645901997,local-fork,2.2.0.dev20231024+cu121,ERROR
-int8,2.363181153933207,local-fork,2.2.0.dev20231024+cu121,ERROR
-sparse,2.054563546180725,local-fork,2.2.0.dev20231024+cu121,ERROR
