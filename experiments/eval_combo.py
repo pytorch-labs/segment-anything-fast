@@ -148,8 +148,6 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
                 predictor.features = features
                 predictor.is_image_set = True
                 coords = coords.unsqueeze(1)
-                # TODO: Should exclude this from the timed region as well?
-                # Might explain a dip in larger batch sizes for vit_b without NT
                 fg_labels = torch.ones(
                     (coords.size(0), 1), dtype=torch.int, device=device)
                 masks, scores, logits = predictor.predict_torch(
