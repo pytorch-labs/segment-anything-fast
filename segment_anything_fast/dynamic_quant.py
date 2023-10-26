@@ -6,6 +6,7 @@ from typing import Tuple, Optional
 import torch
 from torch._dynamo import is_compiling as dynamo_is_compiling
 from segment_anything_fast.int_mm import _int_mm_dequant
+from torch._higher_order_ops.out_dtype import out_dtype
 
 def quantize_activation_per_token(t, scales):
     t = torch.round(t / scales).clamp(-127, 127).to(torch.int8)
@@ -14,10 +15,13 @@ def quantize_activation_per_token(t, scales):
 def quantize_activation_per_token_absmax(t):
     n_bits = 8
     # if the shape of t is [B, N, K], the shape of scales will be [B, N, 1]
-    # want float scales to avoid overflows
-    scales = t.abs().max(dim=-1, keepdim=True)[0].float()
+
+    # dequant with fp16 scale can cause overflow
+    # otherwise leave scales as same dtype
+    if t.dtype == torch.float16:
+        t=t.float()
     q_max = 2 ** (n_bits - 1) - 1
-    scales.clamp_(min=1e-5).div_(q_max)
+    scales = t.abs().max(dim=-1, keepdim=True)[0].clamp(min=1e-5).div(q_max)
     # Note: the original smoothquant does not clamp to qmin/qmax here,
     # but some of the tests with bfloat16 ended up with a flipped sign
     # if we don't clamp.  TODO(future) look into this further.
@@ -34,9 +38,11 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         self,
         in_features: int,
         out_features: int,
-        bias: bool = True
+        bias: bool = True,
+        use_native_int_mm=False
     ) -> None:
         super().__init__(in_features, out_features, bias)
+        self.use_native_int_mm = use_native_int_mm
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """
@@ -58,7 +64,8 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
             w_vals_int8_t,
             w_scales,
             bias,
-            out_dtype=torch.float32,
+            output_dtype=torch.float32,
+            use_native_int_mm=False
         ):
 
             def quant_int8_per_token_matmul(
@@ -66,10 +73,11 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
                 x_scales,
                 w_vals_int8_t,
                 w_scales,
-                out_dtype=torch.float32,
+                output_dtype=torch.float32,
+                use_native_int_mm=False
             ):
                 # Quantized matmul of int8 operands that accumulates to int32 and returns
-                # out_dtype. For now, this is written for approximate numerical
+                # output_dtype. For now, this is written for approximate numerical
                 # Assumes that activation and weight quantization are symmetric,
                 # i.e. act_zp and w_zp is 0.
                 # Assumes that weight quantization is per-channel.
@@ -78,7 +86,7 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
                 # https://github.com/google/gemmlowp/blob/master/doc/quantization.md
                 # for an overview of quantized matmul compute
 
-                # in scalar form, assuming out_dtype is fp32 and zw == 0:
+                # in scalar form, assuming output_dtype is fp32 and zw == 0:
                 #
                 #   Y_i_j_fp32 = sx * sw dot(X_i, W_j)
                 #
@@ -87,52 +95,36 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
                     f'x dtype {x_vals_int8.dtype} not yet supported'
                 assert w_vals_int8_t.dtype == torch.int8, \
                     f'w dtype {w_vals_int8_t.dtype} not yet supported'
-                assert w_scales.dtype == out_dtype, \
-                    f'{w_scales.dtype} does not match {out_dtype}'
-
-                #
-                # 1. do the matrix form of dot(X_i, W_j)
-                #
-
+                assert w_scales.dtype == output_dtype, \
+                    f'{w_scales.dtype} does not match {output_dtype}'
 
                 # TODO(before land): add test case for input with bsz
                 tmp = x_vals_int8.reshape(-1, x_vals_int8.shape[-1])
-                x_scales_flat = x_scales.view(tmp.size(0), 1)
-                w_scales_flat = w_scales.unsqueeze(0)
-                # y_dot_int32 = torch._int_mm(tmp, w_vals_int8_t)
-
-                #
-                # 2. rescale the output
-                #
-                # in cases with large matrices, y_dot_int32 can grow sufficiently
-                # large that y_dot_int32 * a float16 scale is greater than the maximum
-                # value of a float 16, (which results in a value of inf even if multiplying
-                # by the other scale would bring it within the expected range)
-
-                assert x_scales.dtype == torch.float, f"x_scales needs to be a torch.float32 but got {x_scales.dtype}"
-
-                # y = y_dot_int32 * x_scales_flat * w_scales_flat
-                # # can downcast only at the very end
-                # y = y.to(out_dtype)
-
-                # y = _int_mm_dequant(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, out_dtype)
-                y = torch.ops.custom_int_mm.int_mm_dequant(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, out_dtype)
-                return y.reshape(*x_vals_int8.shape[:-1], -1)
+                if use_native_int_mm:
+                    y_dot_int32 = out_dtype(torch.ops.aten.mm.default, torch.int32, tmp, w_vals_int8_t)
+                    assert x_scales.dtype != torch.float16, f"can have overflows happen when x_scales is float16"
+                    y = (y_dot_int32 * x_scales.view(-1, 1) * w_scales).reshape(*x_vals_int8.shape[:-1], -1)
+                else:
+                    x_scales_flat = x_scales.view(tmp.size(0), 1)
+                    w_scales_flat = w_scales.unsqueeze(0)
+                    y = torch.ops.custom_int_mm.int_mm_dequant(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, output_dtype)
+                    y = y.reshape(*x_vals_int8.shape[:-1], -1)
+                return y.to(output_dtype)
 
             # like F.linear, but with int8 dynamic quantization of activation,
             # and a quantized weight
             mm_out = quant_int8_per_token_matmul(
-                x_vals_int8, x_scales, w_vals_int8_t, w_scales, out_dtype)
+                x_vals_int8, x_scales, w_vals_int8_t, w_scales, output_dtype, use_native_int_mm)
             if bias is not None:
                 mm_out += bias
             return mm_out
 
         x_vals_int8, x_scales = quantize_activation_per_token_absmax(X)
-        Y = quant_int8_dynamic_per_token_linear(x_vals_int8, x_scales, self.W_int_repr_t, self.W_scales, self.bias, X.dtype)
+        Y = quant_int8_dynamic_per_token_linear(x_vals_int8, x_scales, self.W_int_repr_t, self.W_scales, self.bias, X.dtype, self.use_native_int_mm)
         return Y
 
     @classmethod
-    def from_float(cls, mod: torch.nn.Linear) -> 'DynamicallyPerAxisQuantizedLinear':
+    def from_float(cls, mod: torch.nn.Linear, use_native_int_mm=False) -> 'DynamicallyPerAxisQuantizedLinear':
         def dynamically_quantize_per_channel(x, quant_min, quant_max, target_dtype):
             # assumes symmetric quantization
             # assumes axis == 0
@@ -184,7 +176,7 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         # create the new module with a toy size to ensure initialization is fast
         fake_in_features, fake_out_features = 8, 8
         new_mod = cls(
-            fake_in_features, fake_out_features, bias=mod.bias is not None)
+            fake_in_features, fake_out_features, bias=mod.bias is not None, use_native_int_mm=use_native_int_mm)
         new_mod.in_features = mod.in_features
         new_mod.out_features = mod.out_features
         W_int_repr, W_scales, _W_zps = dynamically_quantize_per_channel(
@@ -218,8 +210,8 @@ def replace_with_custom_fn_if_matches_filter(
             replace_with_custom_fn_if_matches_filter(
                 child, replacement_fn, filter_fn, new_fqn)
 
-def apply_dynamic_quant(model):
+def apply_dynamic_quant(model, use_native_int_mm=False):
     replace_with_custom_fn_if_matches_filter(
         model,
-        DynamicallyPerAxisQuantizedLinear.from_float,
+        lambda mod: DynamicallyPerAxisQuantizedLinear.from_float(mod, use_native_int_mm),
         lambda mod, fqn: isinstance(mod, torch.nn.Linear))
