@@ -335,10 +335,9 @@ def run(
     for block in predictor.model.image_encoder.blocks:
         block.attn.use_rel_pos = use_rel_pos
 
-    if "dynamic_quant" in compress:
-        use_native_int_mm=not "native_int_mm" in compress
+    if compress == "dynamic_quant":
         from segment_anything_fast.dynamic_quant import apply_dynamic_quant
-        apply_dynamic_quant(predictor.model.image_encoder, use_native_int_mm)
+        apply_dynamic_quant(predictor.model.image_encoder)
     elif compress == "static_quant":
         from segment_anything_fast.static_quant import apply_static_quant
         apply_static_quant(predictor.model.image_encoder)
