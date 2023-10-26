@@ -300,7 +300,6 @@ def run(
         inductorconfig.epilogue_fusion = False
         inductorconfig.coordinate_descent_tuning = True
         inductorconfig.coordinate_descent_check_all_directions = True
-        inductorconfig.force_fuse_int_mm_with_mul = True
 
     if use_half is not None:
         if use_half == "float16":
@@ -340,6 +339,7 @@ def run(
     if compress == "dynamic_quant":
         from segment_anything_fast.dynamic_quant import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
+        inductorconfig.force_fuse_int_mm_with_mul = True
     elif compress == "static_quant":
         from segment_anything_fast.static_quant import apply_static_quant
         apply_static_quant(predictor.model.image_encoder)
