@@ -89,7 +89,8 @@ def run_experiment(experiments_data,
         args = args + ["--print_header", "True"]
     import time
     t0 = time.time()
-    result = subprocess.run(args, capture_output=capture_output)
+    # result = subprocess.run(args, capture_output=capture_output)
+    result = subprocess.run(args)
     if not capture_output:
         return
     t1 = time.time()
@@ -172,16 +173,16 @@ def run(batch_size,
         rt("sparse",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=True, compress="sparse")
 
     if run_experiments:
-        rexp("fp32",         "default",      print_header=print_header)
-        print_header = False
-        rexp("bf16",         "codesign",     use_half="bfloat16")
-        rexp("compile",      "codesign",     use_half="bfloat16",  use_compile="max-autotune")
-        rexp("SDPA",         "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
-        rexp("Triton",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
-        if batch_size > 1:
-            rexp("NT",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1))
+        # rexp("fp32",         "default",      print_header=print_header)
+        # print_header = False
+        # rexp("bf16",         "codesign",     use_half="bfloat16")
+        # rexp("compile",      "codesign",     use_half="bfloat16",  use_compile="max-autotune")
+        # rexp("SDPA",         "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
+        # rexp("Triton",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
+        # if batch_size > 1:
+        #     rexp("NT",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1))
         rexp("int8",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="dynamic_quant")
-        rexp("sparse",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="sparse")
+        # rexp("sparse",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="sparse")
 
 
 if __name__ == '__main__':
