@@ -180,8 +180,8 @@ def run(batch_size,
         rexp("Triton",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
         if batch_size > 1:
             rexp("NT",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1))
-        rexp("int8",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="dynamic_quant")
-        rexp("int8_native",  "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="dynamic_quant_native_int_mm")
+        rexp("int8",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="dynamic_quant", capture_output=False, limit=1024)
+        rexp("int8_native",  "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="dynamic_quant_native_int_mm", capture_output=False, limit=1024)
         rexp("sparse",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="sparse")
 
 
