@@ -5,7 +5,6 @@ from typing import Tuple, Optional
 
 import torch
 from torch._dynamo import is_compiling as dynamo_is_compiling
-from segment_anything_fast.int_mm import _int_mm_dequant
 from torch._higher_order_ops.out_dtype import out_dtype
 
 def quantize_activation_per_token(t, scales):
@@ -38,11 +37,9 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         self,
         in_features: int,
         out_features: int,
-        bias: bool = True,
-        use_native_int_mm=False
+        bias: bool = True
     ) -> None:
         super().__init__(in_features, out_features, bias)
-        self.use_native_int_mm = use_native_int_mm
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """
@@ -65,7 +62,6 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
             w_scales,
             bias,
             output_dtype=torch.float32,
-            use_native_int_mm=False
         ):
 
             def quant_int8_per_token_matmul(
@@ -74,7 +70,6 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
                 w_vals_int8_t,
                 w_scales,
                 output_dtype=torch.float32,
-                use_native_int_mm=False
             ):
                 # Quantized matmul of int8 operands that accumulates to int32 and returns
                 # output_dtype. For now, this is written for approximate numerical
@@ -98,33 +93,41 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
                 assert w_scales.dtype == output_dtype, \
                     f'{w_scales.dtype} does not match {output_dtype}'
 
-                # TODO(before land): add test case for input with bsz
+                #
+                # 1. do the matrix form of dot(X_i, W_j)
+                #
+
+
                 tmp = x_vals_int8.reshape(-1, x_vals_int8.shape[-1])
-                if use_native_int_mm:
-                    y_dot_int32 = out_dtype(torch.ops.aten.mm.default, torch.int32, tmp, w_vals_int8_t)
-                    assert x_scales.dtype != torch.float16, f"can have overflows happen when x_scales is float16"
-                    y = (y_dot_int32 * x_scales.view(-1, 1) * w_scales).reshape(*x_vals_int8.shape[:-1], -1)
-                else:
-                    x_scales_flat = x_scales.view(tmp.size(0), 1)
-                    w_scales_flat = w_scales.unsqueeze(0)
-                    y = torch.ops.custom_int_mm.int_mm_dequant(tmp, w_vals_int8_t, x_scales_flat, w_scales_flat, output_dtype)
-                    y = y.reshape(*x_vals_int8.shape[:-1], -1)
-                return y.to(output_dtype)
+                y_dot_int32 = out_dtype(torch.ops.aten.mm.default, torch.int32, tmp, w_vals_int8_t)
+
+                #
+                # 2. rescale the output
+                #
+                # in cases with large matrices, y_dot_int32 can grow sufficiently
+                # large that y_dot_int32 * a float16 scale is greater than the maximum
+                # value of a float 16, (which results in a value of inf even if multiplying
+                # by the other scale would bring it within the expected range)
+                assert x_scales.dtype != torch.float16, f"can have overflows happen when x_scales is float16"
+
+                y = (y_dot_int32 * x_scales.view(-1, 1) * w_scales)
+
+                return y.reshape(*x_vals_int8.shape[:-1], -1).to(output_dtype)
 
             # like F.linear, but with int8 dynamic quantization of activation,
             # and a quantized weight
             mm_out = quant_int8_per_token_matmul(
-                x_vals_int8, x_scales, w_vals_int8_t, w_scales, output_dtype, use_native_int_mm)
+                x_vals_int8, x_scales, w_vals_int8_t, w_scales, output_dtype)
             if bias is not None:
                 mm_out += bias
             return mm_out
 
         x_vals_int8, x_scales = quantize_activation_per_token_absmax(X)
-        Y = quant_int8_dynamic_per_token_linear(x_vals_int8, x_scales, self.W_int_repr_t, self.W_scales, self.bias, X.dtype, self.use_native_int_mm)
+        Y = quant_int8_dynamic_per_token_linear(x_vals_int8, x_scales, self.W_int_repr_t, self.W_scales, self.bias, X.dtype)
         return Y
 
     @classmethod
-    def from_float(cls, mod: torch.nn.Linear, use_native_int_mm=False) -> 'DynamicallyPerAxisQuantizedLinear':
+    def from_float(cls, mod: torch.nn.Linear) -> 'DynamicallyPerAxisQuantizedLinear':
         def dynamically_quantize_per_channel(x, quant_min, quant_max, target_dtype):
             # assumes symmetric quantization
             # assumes axis == 0
@@ -176,7 +179,7 @@ class DynamicallyPerAxisQuantizedLinear(torch.nn.Linear):
         # create the new module with a toy size to ensure initialization is fast
         fake_in_features, fake_out_features = 8, 8
         new_mod = cls(
-            fake_in_features, fake_out_features, bias=mod.bias is not None, use_native_int_mm=use_native_int_mm)
+            fake_in_features, fake_out_features, bias=mod.bias is not None)
         new_mod.in_features = mod.in_features
         new_mod.out_features = mod.out_features
         W_int_repr, W_scales, _W_zps = dynamically_quantize_per_channel(
@@ -210,8 +213,8 @@ def replace_with_custom_fn_if_matches_filter(
             replace_with_custom_fn_if_matches_filter(
                 child, replacement_fn, filter_fn, new_fqn)
 
-def apply_dynamic_quant(model, use_native_int_mm=False):
+def apply_dynamic_quant(model):
     replace_with_custom_fn_if_matches_filter(
         model,
-        lambda mod: DynamicallyPerAxisQuantizedLinear.from_float(mod, use_native_int_mm),
+        DynamicallyPerAxisQuantizedLinear.from_float,
         lambda mod, fqn: isinstance(mod, torch.nn.Linear))
