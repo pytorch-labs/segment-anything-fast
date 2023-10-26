@@ -7,7 +7,11 @@ import math
 import segment_anything_fast
 
 torch._dynamo.config.cache_size_limit = 50000
-
+# torch._inductor.config.fx_graph_cache = True # seems to slow performance
+torch._inductor.config.epilogue_fusion = False
+torch._inductor.config.coordinate_descent_tuning = True
+torch._inductor.config.coordinate_descent_check_all_directions = True
+torch._inductor.config.force_fuse_int_mm_with_mul = True
 
 def unbind_jagged(device, data, sizes, offsets):
     if data is None:
@@ -193,7 +197,7 @@ def build_results(batched_data_iter,
             if batch_idx == 0:
                 with torch.autograd.profiler.record_function("compilation and warmup"):
                     if str(use_compile) != "False":
-                        predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile)
+                        predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile, fullgraph=True,)
                     # Run first batch a few times for warmup and exclude it from the final timings
                     for _ in range(3):
                         _ = batch_runner(predictor, batch, batch_size, pad_input_image_batch)
