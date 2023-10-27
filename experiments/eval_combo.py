@@ -7,11 +7,6 @@ import math
 import segment_anything_fast
 
 torch._dynamo.config.cache_size_limit = 50000
-# torch._inductor.config.fx_graph_cache = True # seems to slow performance
-torch._inductor.config.epilogue_fusion = False
-torch._inductor.config.coordinate_descent_tuning = True
-torch._inductor.config.coordinate_descent_check_all_directions = True
-torch._inductor.config.force_fuse_int_mm_with_mul = True
 
 def unbind_jagged(device, data, sizes, offsets):
     if data is None:
@@ -175,7 +170,8 @@ def build_results(batched_data_iter,
                   use_compile,
                   use_compile_decoder,
                   use_nested_tensor,
-                  pad_input_image_batch):
+                  pad_input_image_batch,
+                  use_fullgraph=False):
 
     # TODO: Re-enable this for datapoints
     assert not use_compile_decoder
@@ -197,7 +193,7 @@ def build_results(batched_data_iter,
             if batch_idx == 0:
                 with torch.autograd.profiler.record_function("compilation and warmup"):
                     if str(use_compile) != "False":
-                        predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile, fullgraph=True,)
+                        predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile, fullgraph=use_fullgraph)
                     # Run first batch a few times for warmup and exclude it from the final timings
                     for _ in range(3):
                         _ = batch_runner(predictor, batch, batch_size, pad_input_image_batch)
@@ -293,10 +289,17 @@ def run(
     profile_top=False,
     memory_path=None,
     use_local_sam_fork=False,
+    use_compiler_settings=False,
 ):
-    from torch._inductor import config as tritonconfig
-    tritonconfig.triton.unique_kernel_names = True
-    tritonconfig.epilogue_fusion_first = epilogue_fusion_first
+    from torch._inductor import config as inductorconfig
+    inductorconfig.triton.unique_kernel_names = True
+    inductorconfig.epilogue_fusion_first = epilogue_fusion_first
+
+    if use_compiler_settings:
+        # inductorconfig.fx_graph_cache = True # seems to slow performance
+        inductorconfig.epilogue_fusion = False
+        inductorconfig.coordinate_descent_tuning = True
+        inductorconfig.coordinate_descent_check_all_directions = True
 
     if use_half is not None:
         if use_half == "float16":
@@ -336,6 +339,7 @@ def run(
     if compress == "dynamic_quant":
         from segment_anything_fast.dynamic_quant import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
+        inductorconfig.force_fuse_int_mm_with_mul = True
     elif compress == "static_quant":
         from segment_anything_fast.static_quant import apply_static_quant
         apply_static_quant(predictor.model.image_encoder)
