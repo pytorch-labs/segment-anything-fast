@@ -79,7 +79,7 @@ def run(csv_file,
         df = mdf[mdf["batch_size"] == batch_size]
         make_row_chart(batch_size_idx, techniques, df, "img_s(avg)", *axs[0], f"Batch size {batch_size}", (0.0, 0.0), (100.0, 25.0), va,
                        "Images per second", data_format="{:.2f}")
-        make_row_chart(batch_size_idx, techniques, df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 80000, va,
+        make_row_chart(batch_size_idx, techniques, df, "memory(MiB)", *axs[1], f"Batch size {batch_size}", 0, 40000, va,
                        title="Memory savings", data_format="{:.0f}")
         make_row_chart(batch_size_idx, techniques, df, "mIoU", *axs[2], f"Batch size {batch_size}", 0.0, 1.0, va,
                        title="Accuracy", data_format="{:.2f}")
