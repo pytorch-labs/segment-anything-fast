@@ -13,7 +13,7 @@ setup(
         'pycocotools',
         'scipy',
         'scikit-image',
-        'torchao@https://github.com/pytorch-labs/ao.git',
+        'git+https://github.com/pytorch-labs/ao.git#egg=torchao',
     ],
     include_package_data=True,
     package_data={
