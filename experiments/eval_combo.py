@@ -337,7 +337,7 @@ def run(
         block.attn.use_rel_pos = use_rel_pos
 
     if compress == "dynamic_quant":
-        from segment_anything_fast.dynamic_quant import apply_dynamic_quant
+        from torchao.quantization import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
         inductorconfig.force_fuse_int_mm_with_mul = True
     elif compress == "static_quant":
