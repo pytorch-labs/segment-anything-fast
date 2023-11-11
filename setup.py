@@ -13,9 +13,7 @@ setup(
         'pycocotools',
         'scipy',
         'scikit-image',
-    ],
-    dependency_links=[
-        'git+https://github.com/pytorch-labs/ao.git#egg=torchao',
+        'torchao',
     ],
     include_package_data=True,
     package_data={
