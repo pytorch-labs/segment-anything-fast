@@ -13,6 +13,7 @@ setup(
         'pycocotools',
         'scipy',
         'scikit-image',
+        'torchao',
     ],
     include_package_data=True,
     package_data={
