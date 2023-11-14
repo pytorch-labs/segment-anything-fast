@@ -102,7 +102,12 @@ def run(csv_file,
         axs = np.stack([axs])
     
     for batch_size in batch_sizes:
-        color = 'black' if (batch_size == 1) else COLORS[2]
+        if batch_size == 1:
+            color = 'black'
+        elif batch_size == 32:
+            color = 'white'
+        else:
+            color = COLORS[2]
         df = mdf[mdf["batch_size"] == batch_size]
         va = "bottom"
         if 'img_s' in metrics:
