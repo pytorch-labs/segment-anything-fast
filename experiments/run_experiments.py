@@ -144,7 +144,8 @@ def run(batch_size,
         traces_dir=None,
         num_workers=32,
         print_header=True,
-        capture_output=True):
+        capture_output=True,
+        local_fork_only=False):
 
     assert model == "vit_b" or model == "vit_h"
 
@@ -161,23 +162,38 @@ def run(batch_size,
         assert traces_dir is not None
         rt = functools.partial(run_traces_fn, traces_dir, pytorch_path, rexp)
 
-        rt("fp32",           "default",      print_header=print_header)
-        rt("fp16",           "codesign",     use_half="bfloat16")
-        rt("compile",        "codesign",     use_half="bfloat16",  use_compile="max-autotune")
-        rt("SDPA",           "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
-        rt("Triton",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
+        if local_fork_only:
+            rt("fp32",       "local-fork",   print_header=print_header)
+            rt("fp16",       "local-fork",   use_half="bfloat16")
+            rt("compile",    "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
+            # The local fork already uses SDPA + Triton for all of the above experiments.
+            # local_fork_only mainly exists to ablate the order in which we apply
+            # techniques and cannot be used to reproduce the experimental results
+        else:
+            rt("fp32",       "default",      print_header=print_header)
+            rt("fp16",       "codesign",     use_half="bfloat16")
+            rt("compile",    "codesign",     use_half="bfloat16",  use_compile="max-autotune")
+            rt("SDPA",       "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
+            rt("Triton",     "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
         if batch_size > 1:
             rt("NT",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=True)
         rt("int8",           "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
         rt("sparse",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=True, compress="sparse")
 
     if run_experiments:
-        rexp("fp32",         "default",      print_header=print_header)
-        print_header = False
-        rexp("bf16",         "codesign",     use_half="bfloat16")
-        rexp("compile",      "codesign",     use_half="bfloat16",  use_compile="max-autotune")
-        rexp("SDPA",         "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
-        rexp("Triton",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
+        if local_fork_only:
+            rexp("fp32",     "local-fork",     print_header=print_header)
+            rexp("bf16",     "local-fork",     use_half="bfloat16")
+            rexp("compile",  "local-fork",     use_half="bfloat16",  use_compile="max-autotune")
+            # The local fork already uses SDPA + Triton for all of the above experiments.
+            # local_fork_only mainly exists to ablate the order in which we apply
+            # techniques and cannot be used to reproduce the experimental results
+        else:
+            rexp("fp32",     "default",      print_header=print_header)
+            rexp("bf16",     "codesign",     use_half="bfloat16")
+            rexp("compile",  "codesign",     use_half="bfloat16",  use_compile="max-autotune")
+            rexp("SDPA",     "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
+            rexp("Triton",   "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
         if batch_size > 1:
             rexp("NT",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1))
         rexp("int8",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="dynamic_quant")
