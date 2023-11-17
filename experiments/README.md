@@ -46,16 +46,15 @@ These  experiments were run on an Amazon p4d.24xlarge instance. See the Product 
 ### Installation instructions
 
 ```
-$ conda create -n nightly20231023py310
-$ conda activate nightly20231023py310
+$ conda create -n nightly20231117py310
+$ conda activate nightly20231117py310
 $ conda install python=3.10
-$ pip install https://download.pytorch.org/whl/nightly/cu121/torch-2.2.0.dev20231023%2Bcu121-cp310-cp310-linux_x86_64.whl
-$ pip install https://download.pytorch.org/whl/nightly/cu121/torchvision-0.17.0.dev20231023%2Bcu121-cp310-cp310-linux_x86_64.whl
-$ cd /scratch/cpuhrsch/dev
+$ pip install https://download.pytorch.org/whl/nightly/cu121/torch-2.2.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
+$ pip install https://download.pytorch.org/whl/nightly/cu121/torchvision-0.17.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
 $ git clone https://github.com/cpuhrsch/segment-anything.git
 $ cd segment-anything
 $ pip install -e .
-$ cd /scratch/cpuhrsch/dev
+$ cd ..
 $ git clone https://github.com/pytorch-labs/segment-anything-fast.git
 $ cd segment-anything-fast
 $ pip install -e .
