@@ -2,6 +2,8 @@
 
 This work is based on a fork of https://github.com/facebookresearch/segment-anything
 
+The corresponding blog post is https://pytorch.org/blog/accelerating-generative-ai/
+
 
 ## Installation
 
