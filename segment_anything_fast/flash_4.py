@@ -23,6 +23,9 @@ import torch
 import triton
 import triton.language as tl
 
+import os
+import pathlib
+
 
 @triton.jit
 def _fwd_kernel_aligned(
@@ -220,9 +223,18 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
 
 
 def _load_best_configs():
+    device_name = torch.cuda.get_device_name()
+    if not device_name.startswith('NVIDIA A100'):
+        print("Warning: Custom flash attention kernels were written specifically for A100.")
     import importlib
     saved_configs = importlib.resources.files("segment_anything_fast")
     saved_configs = saved_configs / "configs" / "flash_4_configs_a100.p"
+    if not device_name.startswith('NVIDIA A100'):
+        cwd = pathlib.Path.cwd()
+        saved_configs = cwd / "flash_4_configs.p"
+        print(f"We will try to read previously created kernel configurations from {saved_configs}.")
+        print("You can disable this kernel by setting SEGMENT_ANYTHING_FAST_USE_FLASH_4=0")
+        return None
     if saved_configs.is_file():
         import pickle
         with open(saved_configs, 'rb') as f:
@@ -234,6 +246,11 @@ def _save_best_configs(best_configs):
     import importlib
     saved_configs = importlib.resources.files("segment_anything_fast")
     saved_configs = saved_configs / "configs" / "flash_4_configs_a100.p"
+    device_name = torch.cuda.get_device_name()
+    if not device_name.startswith('NVIDIA A100'):
+        saved_configs = pathlib.Path.cwd() / "flash_4_configs.p"
+        print("Warning: Custom flash attention kernels were written specifically for A100.")
+        print(f"Storing configs for {device_name} locally under {saved_configs}")
     with open(saved_configs, 'wb') as f:
         import pickle
         print(f"Saving best configs to file {saved_configs}")
@@ -277,7 +294,7 @@ def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
         BEST_CONFIGS = _load_best_configs()
     key = _create_best_configs_key(q, k, v, rel_h_w, o)
     if key not in BEST_CONFIGS:
-        print("key ", key, " not found. Running autotune")
+        print("key ", key, " not found. Running autotune. This might take a while.")
         import functools
         import itertools
         configs = []
@@ -309,6 +326,9 @@ def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
     return o
 
 
+USE_CUSTOM_KERNEL = bool(int(os.environ.get('SEGMENT_ANYTHING_FAST_USE_FLASH_4', 1)))
+
+
 def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
     """
     Writing this as a composite allows torch.compile to fuse
@@ -320,15 +340,18 @@ def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
     sm_scale = 1. / math.sqrt(q_.size(-1))
     # Check if second last dimension is multiple of 256
     q_size_2_padded = (((q_.size(-2) + 256 - 1) // 256) * 256) - q_.size(-2)
+
+    def kernel_guards(q_, k_, v_):
+        return (q_.dtype == torch.bfloat16 or q_.dtype == torch.float16) and q_.dtype == k_.dtype and k_.dtype == v_.dtype and USE_CUSTOM_KERNEL
     # vit_b and vit_l
-    if q_size_2_padded == 0 and q_.size(-1) == 64:
+    if q_size_2_padded == 0 and q_.size(-1) == 64 and kernel_guards(q_, k_, v_):
         rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
         o = torch.ops.customflash.custom_flash_aligned(
             q_, k_, v_, rel_h_w, sm_scale)
         if o.numel() > 0:
             return o
     # vit_h
-    if q_size_2_padded == 0 and q_.size(-1) == 80:
+    if q_size_2_padded == 0 and q_.size(-1) == 80 and kernel_guards(q_, k_, v_):
         # Only support multiples of 64, so need to pad
         q = torch.nn.functional.pad(q_, (0, 128 - 80, 0, 0), "constant", 0)
         k = torch.nn.functional.pad(k_, (0, 128 - 80, 0, 0), "constant", 0)

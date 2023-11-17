@@ -8,7 +8,6 @@ import segment_anything_fast
 
 torch._dynamo.config.cache_size_limit = 50000
 
-
 def unbind_jagged(device, data, sizes, offsets):
     if data is None:
         return None
@@ -144,8 +143,6 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
                 predictor.features = features
                 predictor.is_image_set = True
                 coords = coords.unsqueeze(1)
-                # TODO: Should exclude this from the timed region as well?
-                # Might explain a dip in larger batch sizes for vit_b without NT
                 fg_labels = torch.ones(
                     (coords.size(0), 1), dtype=torch.int, device=device)
                 masks, scores, logits = predictor.predict_torch(
@@ -173,7 +170,8 @@ def build_results(batched_data_iter,
                   use_compile,
                   use_compile_decoder,
                   use_nested_tensor,
-                  pad_input_image_batch):
+                  pad_input_image_batch,
+                  use_fullgraph=False):
 
     # TODO: Re-enable this for datapoints
     assert not use_compile_decoder
@@ -195,7 +193,7 @@ def build_results(batched_data_iter,
             if batch_idx == 0:
                 with torch.autograd.profiler.record_function("compilation and warmup"):
                     if str(use_compile) != "False":
-                        predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile)
+                        predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile, fullgraph=use_fullgraph)
                     # Run first batch a few times for warmup and exclude it from the final timings
                     for _ in range(3):
                         _ = batch_runner(predictor, batch, batch_size, pad_input_image_batch)
@@ -291,10 +289,17 @@ def run(
     profile_top=False,
     memory_path=None,
     use_local_sam_fork=False,
+    use_compiler_settings=False,
 ):
-    from torch._inductor import config as tritonconfig
-    tritonconfig.triton.unique_kernel_names = True
-    tritonconfig.epilogue_fusion_first = epilogue_fusion_first
+    from torch._inductor import config as inductorconfig
+    inductorconfig.triton.unique_kernel_names = True
+    inductorconfig.epilogue_fusion_first = epilogue_fusion_first
+
+    if use_compiler_settings:
+        # inductorconfig.fx_graph_cache = True # seems to slow performance
+        inductorconfig.epilogue_fusion = False
+        inductorconfig.coordinate_descent_tuning = True
+        inductorconfig.coordinate_descent_check_all_directions = True
 
     if use_half is not None:
         if use_half == "float16":
@@ -332,7 +337,7 @@ def run(
         block.attn.use_rel_pos = use_rel_pos
 
     if compress == "dynamic_quant":
-        from segment_anything_fast.dynamic_quant import apply_dynamic_quant
+        from torchao.quantization import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
     elif compress == "sparse":
         from segment_anything_fast.sparse import apply_sparse

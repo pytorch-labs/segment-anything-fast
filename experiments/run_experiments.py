@@ -3,9 +3,6 @@ import fire
 import itertools
 import functools
 
-home = "/home/cpuhrsch"
-
-sam_path = "/scratch/cpuhrsch/dev/segment-anything"
 sam_commits = {
     "default": "6fdee8f2727f4506cfbbe553e23b895e27956588",
     "graphbreaks": "55f772f77864752f2e98a6fc7713b45a1843c167",
@@ -19,7 +16,8 @@ sam_commits = {
     "wip-flash-sdpa-decoder": "bb1c8b6f3749b1a5f31635f5d2f26bcafa9d94f9"}
 
 
-def change_sam_commit(commit_name):
+
+def change_sam_commit(sam_path, commit_name):
     assert commit_name in sam_commits
     root_cmd = ["git", "-C", sam_path]
     result = subprocess.run(
@@ -31,11 +29,12 @@ def change_sam_commit(commit_name):
 
 
 def run_experiment(experiments_data,
+                   sam_path,
+                   model_type,
                    idx,
                    sam_commit_name,
-                   model_type,
-                   batch_size,
-                   num_workers,
+                   batch_size=1,
+                   num_workers=0,
                    use_half=None,
                    use_compile="False",
                    compress=None,
@@ -68,7 +67,7 @@ def run_experiment(experiments_data,
     if sam_commit_name == "local-fork":
         args = args + ["--use_local_sam_fork", "True"]
     else:
-        change_sam_commit(sam_commit_name)
+        change_sam_commit(sam_path, sam_commit_name)
     if use_half:
         args = args + ["--use_half", use_half]
     if compress is not None:
@@ -107,16 +106,14 @@ def run_experiment(experiments_data,
     print(prefix + "," + result.stdout.decode().split("\n")[-2])
 
 
-def run_traces(*args, **kwargs):
+def run_traces_fn(traces_dir, pytorch_path, rexp, *args, **kwargs):
     # Limit to 10 batches
     kwargs['limit'] = 160
-    # Folder to save results to
-    traces_dir = "/home/cpuhrsch/tmp/traces/20230924"
 
     # Create kernel traces
     profile_path = f"{traces_dir}/{args[0]}.json.gz"
     kwargs['profile_path'] = profile_path
-    run_experiment(*args, **kwargs)
+    rexp(*args, **kwargs)
     kwargs['profile_path'] = None
 
     # Don't print header again if already printed
@@ -129,41 +126,79 @@ def run_traces(*args, **kwargs):
 
     memory_path = f"{traces_dir}/{args[0]}"
     kwargs['memory_path'] = memory_path + ".pickle"
-    run_experiment(*args, **kwargs)
+    rexp(*args, **kwargs)
     kwargs['memory_path'] = None
 
     # Convert memory trace to html page
-    conversion_cmd = ["python", "/home/cpuhrsch/dev/pytorch/torch/cuda/_memory_viz.py",
+    conversion_cmd = ["python", f"{pytorch_path}/torch/cuda/_memory_viz.py",
                       "trace_plot", memory_path + ".pickle", "-o", memory_path + ".html"]
     result = subprocess.run(conversion_cmd, capture_output=True)
-    assert result.returncode == 0
 
-def run(experiments_data=None):
-    if experiments_data is None:
-        experiments_data = "experiments_data"
+def run(batch_size,
+        model,
+        pytorch_path,
+        sam_path,
+        experiments_data,
+        run_traces=False,
+        run_experiments=False,
+        traces_dir=None,
+        num_workers=32,
+        print_header=True,
+        capture_output=True,
+        local_fork_only=False):
 
-    # run_traces("fp32",           "default",                     "vit_b", 16, 32, print_header=True)
-    # run_traces("fp16",           "codesign",                    "vit_b", 16, 32, use_half=True)
-    # run_traces("compile",        "codesign",                    "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
-    # run_traces("SDPA",           "sdpa-decoder",                "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
-    # run_traces("Triton",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune")
-    # run_traces("NT",             "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True)
-    # run_traces("int8",           "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
-    # run_traces("sparse",         "local-fork",                  "vit_b", 16, 32, use_half=True,  use_compile="max-autotune", use_nested_tensor=True, compress="sparse")
+    assert model == "vit_b" or model == "vit_h"
 
-    rexp = functools.partial(run_experiment, experiments_data)
+    rexp = functools.partial(run_experiment,
+                             experiments_data,
+                             sam_path,
+                             model,
+                             batch_size=batch_size,
+                             num_workers=num_workers,
+                             capture_output=capture_output)
+
     print_header = True
-    for bs, model in itertools.product([1, 32], ["vit_b", "vit_h"]):
-        # rexp("fp32",        "default",                     model, bs, 32, print_header=print_header)
-        print_header = False
-        # rexp("bf16",        "codesign",                    model, bs, 32, use_half="bfloat16")
-        # rexp("compile",     "codesign",                    model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-        # rexp("SDPA",        "sdpa-decoder",                model, bs, 32, use_half="bfloat16",  use_compile="max-autotune")
-        rexp("Triton",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", capture_output=False)
-        if bs > 1:
-            rexp("NT",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1))
-        rexp("int8",        "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="dynamic_quant")
-        rexp("sparse",      "local-fork",                  model, bs, 32, use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(bs > 1), compress="sparse")
+    if run_traces:
+        assert traces_dir is not None
+        rt = functools.partial(run_traces_fn, traces_dir, pytorch_path, rexp)
+
+        if local_fork_only:
+            rt("fp32",       "local-fork",   print_header=print_header)
+            rt("fp16",       "local-fork",   use_half="bfloat16")
+            rt("compile",    "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
+            # The local fork already uses SDPA + Triton for all of the above experiments.
+            # local_fork_only mainly exists to ablate the order in which we apply
+            # techniques and cannot be used to reproduce the experimental results
+        else:
+            rt("fp32",       "default",      print_header=print_header)
+            rt("fp16",       "codesign",     use_half="bfloat16")
+            rt("compile",    "codesign",     use_half="bfloat16",  use_compile="max-autotune")
+            rt("SDPA",       "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
+            rt("Triton",     "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
+        if batch_size > 1:
+            rt("NT",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=True)
+        rt("int8",           "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=True, compress="dynamic_quant")
+        rt("sparse",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=True, compress="sparse")
+
+    if run_experiments:
+        if local_fork_only:
+            rexp("fp32",     "local-fork",     print_header=print_header)
+            rexp("bf16",     "local-fork",     use_half="bfloat16")
+            rexp("compile",  "local-fork",     use_half="bfloat16",  use_compile="max-autotune")
+            # The local fork already uses SDPA + Triton for all of the above experiments.
+            # local_fork_only mainly exists to ablate the order in which we apply
+            # techniques and cannot be used to reproduce the experimental results
+        else:
+            rexp("fp32",     "default",      print_header=print_header)
+            rexp("bf16",     "codesign",     use_half="bfloat16")
+            rexp("compile",  "codesign",     use_half="bfloat16",  use_compile="max-autotune")
+            rexp("SDPA",     "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
+            rexp("Triton",   "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
+        if batch_size > 1:
+            rexp("NT",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1))
+        rexp("int8",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="dynamic_quant")
+        rexp("sparse",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="sparse")
+
 
 if __name__ == '__main__':
     fire.Fire(run)

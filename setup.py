@@ -7,12 +7,13 @@ setup(
     version='0.2',
     packages=packages,
     install_requires=[
-        'torch>=2.2.0.dev20231019',
-        'torchvision>=0.17.0.dev20231019',
+        'torch>=2.2.0.dev20231026',
+        'torchvision>=0.17.0.dev20231026',
         'diskcache',
         'pycocotools',
         'scipy',
         'scikit-image',
+        'torchao',
     ],
     include_package_data=True,
     package_data={

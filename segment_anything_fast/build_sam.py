@@ -51,6 +51,46 @@ sam_model_registry = {
     "vit_b": build_sam_vit_b,
 }
 
+def _apply_eval_dtype_sam(model, dtype=None):
+
+    def prep_model(model, dtype):
+        if dtype is not None:
+            return model.eval().to(dtype)
+        return model.eval()
+
+    model.image_encoder = prep_model(model.image_encoder, dtype)
+    model.prompt_encoder = prep_model(model.prompt_encoder, dtype)
+    model.mask_decoder = prep_model(model.mask_decoder, dtype)
+
+    return model
+
+def build_sam_fast_vit_h(checkpoint=None):
+    sam = build_sam_vit_h(checkpoint)
+    sam = _apply_eval_dtype_sam(sam)
+    sam.image_encoder = torch.compile(sam.image_encoder, mode='max-autotune')
+    return sam
+
+build_sam_fast = build_sam_fast_vit_h
+
+def build_sam_fast_vit_l(checkpoint=None):
+    sam = build_sam_vit_l(checkpoint)
+    sam = _apply_eval_dtype_sam(sam)
+    sam.image_encoder = torch.compile(sam.image_encoder, mode='max-autotune')
+    return sam
+
+def build_sam_fast_vit_b(checkpoint=None):
+    sam = build_sam_vit_b(checkpoint)
+    sam = _apply_eval_dtype_sam(sam)
+    sam.image_encoder = torch.compile(sam.image_encoder, mode='max-autotune')
+    return sam
+
+sam_model_fast_registry = {
+    "default": build_sam_fast_vit_h,
+    "vit_h": build_sam_fast_vit_h,
+    "vit_l": build_sam_fast_vit_l,
+    "vit_b": build_sam_fast_vit_b,
+}
+
 
 def _build_sam(
     encoder_embed_dim,
