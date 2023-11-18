@@ -114,7 +114,7 @@ def _fwd_kernel_aligned(
         # Bias
         b0 = tl.load(B0 + b_offset + ((start_m * BLOCK_M + b_ptr_offsets_m)
                      * stride_b0m)[:, None] + start_n // BLOCK_N)
-        qk += (b0 + b1)
+        qk += (b0 + b1) * 1.44269504
 
         # -- compute scaling constant ---
         m_i_new = tl.maximum(m_i, tl.max(qk, 1))
