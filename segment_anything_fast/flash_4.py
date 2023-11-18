@@ -292,6 +292,9 @@ def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
     global BEST_CONFIGS
     if BEST_CONFIGS is None:
         BEST_CONFIGS = _load_best_configs()
+    # Loading must have not been successful. Let's create a new dictionary.
+    if BEST_CONFIGS is None:
+        BEST_CONFIGS = {}
     key = _create_best_configs_key(q, k, v, rel_h_w, o)
     if key not in BEST_CONFIGS:
         print("key ", key, " not found. Running autotune. This might take a while.")
