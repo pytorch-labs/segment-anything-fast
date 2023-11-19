@@ -18,24 +18,36 @@ This modification was designed by Christian Puhrsch and Daniel Haziza
 
 """
 
-import torch
-
-import triton
-import triton.language as tl
-
 import os
 import pathlib
+
+import torch
+import triton
+import triton.language as tl
 
 
 @triton.jit
 def _fwd_kernel_aligned(
-    Q, K, V, B0, sm_scale,
+    Q,
+    K,
+    V,
+    B0,
+    sm_scale,
     Out,
-    stride_qh, stride_qm, stride_qk,
-    stride_kh, stride_kn, stride_kk,
-    stride_vh, stride_vk, stride_vn,
-    stride_oh, stride_om, stride_on,
-    stride_b0h, stride_b0m,
+    stride_qh,
+    stride_qm,
+    stride_qk,
+    stride_kh,
+    stride_kn,
+    stride_kk,
+    stride_vh,
+    stride_vk,
+    stride_vn,
+    stride_oh,
+    stride_om,
+    stride_on,
+    stride_b0h,
+    stride_b0m,
     Z,
     H,
     N_CTX,
@@ -57,7 +69,7 @@ def _fwd_kernel_aligned(
         strides=(stride_qm, stride_qk),
         offsets=(start_m * BLOCK_M, 0),
         block_shape=(BLOCK_M, BLOCK_DMODEL),
-        order=(1, 0)
+        order=(1, 0),
     )
     K_block_ptr = tl.make_block_ptr(
         base=K + kv_offset,
@@ -65,7 +77,7 @@ def _fwd_kernel_aligned(
         strides=(stride_kk, stride_kn),
         offsets=(0, 0),
         block_shape=(BLOCK_DMODEL, BLOCK_N),
-        order=(0, 1)
+        order=(0, 1),
     )
     V_block_ptr = tl.make_block_ptr(
         base=V + kv_offset,
@@ -73,7 +85,7 @@ def _fwd_kernel_aligned(
         strides=(stride_vk, stride_vn),
         offsets=(0, 0),
         block_shape=(BLOCK_N, BLOCK_DMODEL),
-        order=(1, 0)
+        order=(1, 0),
     )
 
     # initialize offsets
@@ -95,10 +107,13 @@ def _fwd_kernel_aligned(
     b_ptr_offsets_m = tl.arange(0, BLOCK_M)
 
     b_offset = off_hz * stride_b0h
-    b_ptr_offsets_n_1 = (tl.arange(0, BLOCK_N) %
-                         BIAS_LAST_SIZE) + BIAS_LAST_SIZE
-    b1 = tl.load(B0 + b_offset + ((start_m * BLOCK_M + b_ptr_offsets_m)
-                 * stride_b0m)[:, None] + b_ptr_offsets_n_1[None, :])
+    b_ptr_offsets_n_1 = (tl.arange(0, BLOCK_N) % BIAS_LAST_SIZE) + BIAS_LAST_SIZE
+    b1 = tl.load(
+        B0
+        + b_offset
+        + ((start_m * BLOCK_M + b_ptr_offsets_m) * stride_b0m)[:, None]
+        + b_ptr_offsets_n_1[None, :]
+    )
     for start_n in range(lo, hi, BLOCK_N):
         # -- load k, v --
         # , boundary_check=(0, 1), padding_option="zero")
@@ -112,8 +127,12 @@ def _fwd_kernel_aligned(
         # -- compute rel_h[:, None] + rel_w[None, :] bias ---
 
         # Bias
-        b0 = tl.load(B0 + b_offset + ((start_m * BLOCK_M + b_ptr_offsets_m)
-                     * stride_b0m)[:, None] + start_n // BLOCK_N)
+        b0 = tl.load(
+            B0
+            + b_offset
+            + ((start_m * BLOCK_M + b_ptr_offsets_m) * stride_b0m)[:, None]
+            + start_n // BLOCK_N
+        )
         qk += (b0 + b1) * 1.44269504
 
         # -- compute scaling constant ---
@@ -140,7 +159,7 @@ def _fwd_kernel_aligned(
         strides=(stride_om, stride_on),
         offsets=(start_m * BLOCK_M, 0),
         block_shape=(BLOCK_M, BLOCK_DMODEL),
-        order=(1, 0)
+        order=(1, 0),
     )
     tl.store(O_block_ptr, acc.to(OUT_DTYPE))
 
@@ -152,7 +171,8 @@ def _autotune(configs, function):
         try:
             f(*args, **kwargs)
             t0 = benchmark.Timer(
-                stmt="f(*args, **kwargs)", globals={"args": args, "kwargs": kwargs, "f": f}
+                stmt="f(*args, **kwargs)",
+                globals={"args": args, "kwargs": kwargs, "f": f},
             )
         except:
             return None
@@ -163,7 +183,8 @@ def _autotune(configs, function):
     for config in configs:
         BLOCK_M, BLOCK_N, num_warps, num_stages = config
         t_config = benchmark_torch_function_in_microseconds(
-            function, BLOCK_M, BLOCK_N, num_warps, num_stages)
+            function, BLOCK_M, BLOCK_N, num_warps, num_stages
+        )
         if t_config is not None:
             if best is not None:
                 if t_config < best:
@@ -176,16 +197,14 @@ def _autotune(configs, function):
     return best, best_config
 
 
-def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
-                                                 BLOCK_M,
-                                                 BLOCK_N,
-                                                 num_warps,
-                                                 num_stages):
+def _attention_rel_h_rel_w_kernel_aligned_device(
+    q, k, v, rel_h_w, sm_scale, o, BLOCK_M, BLOCK_N, num_warps, num_stages
+):
     _, Lk, _ = q.shape[-1], k.shape[-1], v.shape[-1]
     assert q.size() == k.size()
     assert q.size() == v.size()
     assert q.size(-2) == rel_h_w.size(-2)
-    assert (q.dtype == torch.bfloat16 or q.dtype == torch.float16)
+    assert q.dtype == torch.bfloat16 or q.dtype == torch.float16
     assert k.dtype == q.dtype
     assert v.dtype == k.dtype
     assert o.dtype == v.dtype
@@ -199,15 +218,26 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
     assert P_SEQ == 0
     assert rel_h_w.is_contiguous(), str(rel_h_w.stride())
     _fwd_kernel_aligned[grid](
-        q, k, v,
+        q,
+        k,
+        v,
         rel_h_w,
         sm_scale,
         o,
-        q.stride(1), q.stride(2), q.stride(3),
-        k.stride(1), k.stride(2), k.stride(3),
-        v.stride(1), v.stride(2), v.stride(3),
-        o.stride(1), o.stride(2), o.stride(3),
-        rel_h_w.stride(1), rel_h_w.stride(2),
+        q.stride(1),
+        q.stride(2),
+        q.stride(3),
+        k.stride(1),
+        k.stride(2),
+        k.stride(3),
+        v.stride(1),
+        v.stride(2),
+        v.stride(3),
+        o.stride(1),
+        o.stride(2),
+        o.stride(3),
+        rel_h_w.stride(1),
+        rel_h_w.stride(2),
         q.shape[0],
         q.shape[1],
         q.shape[2],
@@ -219,54 +249,79 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
         BLOCK_N=BLOCK_N,
         BLOCK_DMODEL=Lk,
         num_warps=num_warps,
-        num_stages=num_stages)
+        num_stages=num_stages,
+    )
 
 
 def _load_best_configs():
     device_name = torch.cuda.get_device_name()
-    if not device_name.startswith('NVIDIA A100'):
-        print("Warning: Custom flash attention kernels were written specifically for A100.")
+    if not device_name.startswith("NVIDIA A100"):
+        print(
+            "Warning: Custom flash attention kernels were written specifically for A100."
+        )
     import importlib
+
     saved_configs = importlib.resources.files("segment_anything_fast")
     saved_configs = saved_configs / "configs" / "flash_4_configs_a100.p"
-    if not device_name.startswith('NVIDIA A100'):
+    if not device_name.startswith("NVIDIA A100"):
         cwd = pathlib.Path.cwd()
         saved_configs = cwd / "flash_4_configs.p"
-        print(f"We will try to read previously created kernel configurations from {saved_configs}.")
-        print("You can disable this kernel by setting SEGMENT_ANYTHING_FAST_USE_FLASH_4=0")
+        print(
+            f"We will try to read previously created kernel configurations from {saved_configs}."
+        )
+        print(
+            "You can disable this kernel by setting SEGMENT_ANYTHING_FAST_USE_FLASH_4=0"
+        )
         return None
     if saved_configs.is_file():
         import pickle
-        with open(saved_configs, 'rb') as f:
+
+        with open(saved_configs, "rb") as f:
             print(f"Loading best configs from file {saved_configs}")
             return pickle.load(f)
 
 
 def _save_best_configs(best_configs):
     import importlib
+
     saved_configs = importlib.resources.files("segment_anything_fast")
     saved_configs = saved_configs / "configs" / "flash_4_configs_a100.p"
     device_name = torch.cuda.get_device_name()
-    if not device_name.startswith('NVIDIA A100'):
+    if not device_name.startswith("NVIDIA A100"):
         saved_configs = pathlib.Path.cwd() / "flash_4_configs.p"
-        print("Warning: Custom flash attention kernels were written specifically for A100.")
+        print(
+            "Warning: Custom flash attention kernels were written specifically for A100."
+        )
         print(f"Storing configs for {device_name} locally under {saved_configs}")
-    with open(saved_configs, 'wb') as f:
+    with open(saved_configs, "wb") as f:
         import pickle
+
         print(f"Saving best configs to file {saved_configs}")
         pickle.dump(best_configs, f)
 
 
 def _create_best_configs_key(q, k, v, rel_h_w, o):
-    key = (q.size(),   k.size(),   v.size(),   rel_h_w.size(),   o.size(),
-           q.stride(), k.stride(), v.stride(), rel_h_w.stride(), o.stride())
+    key = (
+        q.size(),
+        k.size(),
+        v.size(),
+        rel_h_w.size(),
+        o.size(),
+        q.stride(),
+        k.stride(),
+        v.stride(),
+        rel_h_w.stride(),
+        o.stride(),
+    )
     return key
 
 
 BEST_CONFIGS = None
 
 lib = torch.library.Library("customflash", "FRAGMENT")
-lib.define("custom_flash_aligned(Tensor q, Tensor k, Tensor v, Tensor rel_h_w, float sm_scale) -> Tensor")
+lib.define(
+    "custom_flash_aligned(Tensor q, Tensor k, Tensor v, Tensor rel_h_w, float sm_scale) -> Tensor"
+)
 
 
 # All that's needed for torch.compile support
@@ -300,36 +355,50 @@ def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
         print("key ", key, " not found. Running autotune. This might take a while.")
         import functools
         import itertools
+
         configs = []
-        for (BLOCK_M, BLOCK_N, num_warps) in itertools.product([64, 128], [64, 128], [1, 2, 4, 8]):
+        for BLOCK_M, BLOCK_N, num_warps in itertools.product(
+            [64, 128], [64, 128], [1, 2, 4, 8]
+        ):
             for num_stages in range(1, num_warps + 1):
                 configs.append((BLOCK_M, BLOCK_N, num_warps, num_stages))
         print("all configs len: ", len(configs))
-        best, best_config = _autotune(configs, functools.partial(_attention_rel_h_rel_w_kernel_aligned_device,
-                                                                 q, k, v, rel_h_w, sm_scale, o))
+        best, best_config = _autotune(
+            configs,
+            functools.partial(
+                _attention_rel_h_rel_w_kernel_aligned_device,
+                q,
+                k,
+                v,
+                rel_h_w,
+                sm_scale,
+                o,
+            ),
+        )
         BEST_CONFIGS[key] = best_config
-        print("Found best_config ", best_config,
-              " with time ", best, " for key ", key)
+        print("Found best_config ", best_config, " with time ", best, " for key ", key)
         _save_best_configs(BEST_CONFIGS)
     best_config = BEST_CONFIGS[key]
     if best_config is None:
         return torch.tensor([])
 
-    _attention_rel_h_rel_w_kernel_aligned_device(q,
-                                                 k,
-                                                 v,
-                                                 rel_h_w,
-                                                 sm_scale,
-                                                 o,
-                                                 best_config[0],
-                                                 best_config[1],
-                                                 best_config[2],
-                                                 best_config[3])
+    _attention_rel_h_rel_w_kernel_aligned_device(
+        q,
+        k,
+        v,
+        rel_h_w,
+        sm_scale,
+        o,
+        best_config[0],
+        best_config[1],
+        best_config[2],
+        best_config[3],
+    )
 
     return o
 
 
-USE_CUSTOM_KERNEL = bool(int(os.environ.get('SEGMENT_ANYTHING_FAST_USE_FLASH_4', 1)))
+USE_CUSTOM_KERNEL = bool(int(os.environ.get("SEGMENT_ANYTHING_FAST_USE_FLASH_4", 1)))
 
 
 def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
@@ -340,17 +409,23 @@ def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
     """
 
     import math
-    sm_scale = 1. / math.sqrt(q_.size(-1))
+
+    sm_scale = 1.0 / math.sqrt(q_.size(-1))
     # Check if second last dimension is multiple of 256
     q_size_2_padded = (((q_.size(-2) + 256 - 1) // 256) * 256) - q_.size(-2)
 
     def kernel_guards(q_, k_, v_):
-        return (q_.dtype == torch.bfloat16 or q_.dtype == torch.float16) and q_.dtype == k_.dtype and k_.dtype == v_.dtype and USE_CUSTOM_KERNEL
+        return (
+            (q_.dtype == torch.bfloat16 or q_.dtype == torch.float16)
+            and q_.dtype == k_.dtype
+            and k_.dtype == v_.dtype
+            and USE_CUSTOM_KERNEL
+        )
+
     # vit_b and vit_l
     if q_size_2_padded == 0 and q_.size(-1) == 64 and kernel_guards(q_, k_, v_):
         rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
-        o = torch.ops.customflash.custom_flash_aligned(
-            q_, k_, v_, rel_h_w, sm_scale)
+        o = torch.ops.customflash.custom_flash_aligned(q_, k_, v_, rel_h_w, sm_scale)
         if o.numel() > 0:
             return o
     # vit_h
@@ -360,10 +435,74 @@ def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
         k = torch.nn.functional.pad(k_, (0, 128 - 80, 0, 0), "constant", 0)
         v = torch.nn.functional.pad(v_, (0, 128 - 80, 0, 0), "constant", 0)
         rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
-        o = torch.ops.customflash.custom_flash_aligned(
-            q, k, v, rel_h_w, sm_scale)
+        o = torch.ops.customflash.custom_flash_aligned(q, k, v, rel_h_w, sm_scale)
         if o.numel() > 0:
             return o[:, :, :, :80]
-    attn_bias = (rel_h_ + rel_w_).view(q_.size(0), q_.size(1),
-                                       rel_h_.size(2), rel_h_.size(3) * rel_w_.size(4))
-    return torch.nn.functional.scaled_dot_product_attention(q_, k_, v_, attn_mask=attn_bias)
+    attn_bias = (rel_h_ + rel_w_).view(
+        q_.size(0), q_.size(1), rel_h_.size(2), rel_h_.size(3) * rel_w_.size(4)
+    )
+    return torch.nn.functional.scaled_dot_product_attention(
+        q_, k_, v_, attn_mask=attn_bias
+    )
+
+
+@torch.no_grad()
+def test_op(batch, head, seq_len, hidden_dim, dtype=torch.float16):
+    import math
+
+    sm_scale = 1.0 / math.sqrt(hidden_dim)
+    device = "cuda"
+    torch.manual_seed(20)
+    q_ = torch.empty(
+        (batch, head, seq_len, hidden_dim), dtype=dtype, device=device
+    ).normal_(mean=0.0, std=0.5)
+    k_ = torch.empty(
+        (batch, head, seq_len, hidden_dim), dtype=dtype, device=device
+    ).normal_(mean=0.0, std=0.5)
+    v_ = torch.empty(
+        (batch, head, seq_len, hidden_dim), dtype=dtype, device=device
+    ).normal_(mean=0.0, std=0.5)
+    w = int((seq_len) ** 0.5)
+    assert w * w == seq_len, "seq_len must be a perfect square"
+
+    rel_h_ = torch.empty(
+        (batch, head, seq_len, w, 1), dtype=dtype, device=device
+    ).normal_(mean=0, std=0.5)
+    rel_w_ = torch.empty(
+        (batch, head, seq_len, 1, w), dtype=dtype, device=device
+    ).normal_(mean=0, std=0.5)
+    q = torch.nn.functional.pad(q_, (0, 128 - 80, 0, 0), "constant", 0)
+    k = torch.nn.functional.pad(k_, (0, 128 - 80, 0, 0), "constant", 0)
+    v = torch.nn.functional.pad(v_, (0, 128 - 80, 0, 0), "constant", 0)
+    rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
+    tri_out = torch.empty_like(q, memory_format=torch.contiguous_format)
+    _attention_rel_h_rel_w_kernel_aligned_device(
+        q,
+        k,
+        v,
+        rel_h_w,
+        sm_scale,
+        tri_out,
+        BLOCK_M=128,
+        BLOCK_N=64,
+        num_warps=1,
+        num_stages=1,
+    )
+    tri_out = tri_out[:, :, :, :hidden_dim]
+    # reference implementation
+    attn_bias = (rel_h_ + rel_w_).view(
+        q_.size(0), q_.size(1), rel_h_.size(2), rel_h_.size(3) * rel_w_.size(4)
+    )
+    ref_out = torch.nn.functional.scaled_dot_product_attention(
+        q_, k_, v_, attn_mask=attn_bias
+    )
+
+    # compare
+    print("max diff: ", (ref_out - tri_out).abs().max().item())
+    print(
+        torch.nn.functional.cosine_similarity(ref_out.ravel(), tri_out.ravel(), dim=-1)
+    )
+
+
+if __name__ == "__main__":
+    test_op(1, 16, 4096, 80, dtype=torch.float16)
