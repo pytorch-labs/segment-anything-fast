@@ -41,7 +41,7 @@ image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 
 def run(sam_model_registry, SamAutomaticMaskGenerator, optimize=False):
-    sam_checkpoint = "/home/cpuhrsch/saf/experiments_data/checkpoints/sam_vit_h_4b8939.pth"
+    sam_checkpoint = "checkpoints/sam_vit_h_4b8939.pth"
     model_type = "vit_h"
     device = "cuda"
     sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
@@ -54,7 +54,11 @@ def run(sam_model_registry, SamAutomaticMaskGenerator, optimize=False):
         # mask_generator.predictor.model.image_encoder = torch.compile(mask_generator.predictor.model.image_encoder, mode="max-autotune")
         mask_generator.predictor.model.prompt_encoder = torch.compile(mask_generator.predictor.model.prompt_encoder, mode="max-autotune")
         mask_generator.predictor.model.mask_decoder = torch.compile(mask_generator.predictor.model.mask_decoder, mode="max-autotune")
-    masks = mask_generator.generate(image)
+    print("Start warmup")
+    # warmup
+    for _ in range(5):
+        masks = mask_generator.generate(image)
+    print("End warmup")
     ms = benchmark_torch_function_in_microseconds(mask_generator.generate, image)
     print(f"Generating this mask takes {ms}ms. We set optimize to {optimize}.")
     profiler_runner(f"asdf_{optimize}.json.gz", mask_generator.generate, image)
