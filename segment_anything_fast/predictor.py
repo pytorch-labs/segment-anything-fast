@@ -215,7 +215,7 @@ class SamPredictor:
             raise RuntimeError("An image must be set with .set_image(...) before mask prediction.")
 
         if point_coords is not None:
-            points = (point_coords.clone(), point_labels.clone())
+            points = (point_coords, point_labels)
         else:
             points = None
 

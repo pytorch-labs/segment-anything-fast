@@ -115,23 +115,42 @@ def mask_to_rle_pytorch(tensor: torch.Tensor) -> List[Dict[str, Any]]:
 
     # Compute change indices
     diff = tensor[:, 1:] ^ tensor[:, :-1]
+    diff = torch.cat([torch.tensor([[True]]).pin_memory().cuda().expand_as(diff.narrow(1, 0, 1)), diff, torch.tensor([[True]]).pin_memory().cuda().expand_as(diff.narrow(1, 0, 1))], dim=1)
     change_indices = diff.nonzero()
+
+    alt_lens = torch.cumsum(torch.cat([torch.tensor([0]).pin_memory().cuda(), diff.sum(dim=1)]), dim=0).tolist()
+
+    all_cur_idx = change_indices[:, 1]
+    all_btw_idx = torch.cat([all_cur_idx[1:], all_cur_idx[:1]]) - all_cur_idx
+    all_btw_idx = all_btw_idx.detach().cpu().tolist()
 
     # Encode run length
     out = []
-    for i in range(b):
-        cur_idxs = change_indices[change_indices[:, 0] == i, 1]
-        cur_idxs = torch.cat(
-            [
-                torch.tensor([0], dtype=cur_idxs.dtype, device=cur_idxs.device),
-                cur_idxs + 1,
-                torch.tensor([h * w], dtype=cur_idxs.dtype, device=cur_idxs.device),
-            ]
-        )
-        btw_idxs = cur_idxs[1:] - cur_idxs[:-1]
-        counts = [] if tensor[i, 0] == 0 else [0]
-        counts.extend(btw_idxs.detach().cpu().tolist())
+    counts_init = (tensor[:, 0] == 0).tolist()
+    for i, ci in zip(range(b), counts_init):
+        # cur_idxs = change_indices[change_indices[:, 0] == i, 1]
+        # cur_idxs = all_cur_idx[alt_lens[i]:alt_lens[i + 1]]
+        # cur_idxs = torch.cat(
+        #     [
+        #         torch.tensor([0], dtype=cur_idxs.dtype, device=cur_idxs.device),
+        #         cur_idxs + 1,
+        #         torch.tensor([h * w], dtype=cur_idxs.dtype, device=cur_idxs.device),
+        #     ]
+        # )
+        # btw_idxs = cur_idxs[1:] - cur_idxs[:-1]
+        btw_idxs = all_btw_idx[alt_lens[i]:alt_lens[i + 1]]
+        counts = [] if ci else [0]
+        # counts.extend(btw_idxs.detach().cpu().tolist())
+        # counts.extend(btw_idxs.tolist())
+        counts.extend(btw_idxs)
         out.append({"size": [h, w], "counts": counts})
+
+    # alt_counts_0 = torch.cat([torch.tensor([[True]]).expand_as(diff.narrow(1, 0, 1)), diff, torch.tensor([[True]]).expand_as(diff.narrow(1, 0, 1))], dim=1)
+    # alt_counts_1 = alt_counts_0.nonzero()[:, 1]
+    # alt_counts_2 = alt_counts_1[1:] - alt_counts_1[:-1]
+    # lens = torch.tensor([len(o['counts']) for o in out])
+    # alt_lens = diff.sum(dim=1)
+    # import pdb; pdb.set_trace()
     return out
 
 
