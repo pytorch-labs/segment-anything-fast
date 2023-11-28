@@ -162,6 +162,7 @@ def mask_to_rle_pytorch(tensor: torch.Tensor) -> List[Dict[str, Any]]:
         btw_idxs = cur_idxs[1:] - cur_idxs[:-1]
         counts = [] if tensor[i, 0] == 0 else [0]
         counts.extend(btw_idxs.detach().cpu().tolist())
+        out.append({"size": [h, w], "counts": counts})
     return out
 
 
