@@ -103,8 +103,7 @@ def batch_iterator(batch_size: int, *args) -> Generator[List[Any], None, None]:
     for b in range(n_batches):
         yield [arg[b * batch_size : (b + 1) * batch_size] for arg in args]
 
-
-def mask_to_rle_pytorch(tensor: torch.Tensor) -> List[Dict[str, Any]]:
+def mask_to_rle_pytorch_2(tensor: torch.Tensor) -> List[Dict[str, Any]]:
     """
     Encodes masks to an uncompressed RLE, in the format expected by
     pycoco tools.
@@ -128,29 +127,41 @@ def mask_to_rle_pytorch(tensor: torch.Tensor) -> List[Dict[str, Any]]:
     out = []
     counts_init = (tensor[:, 0] == 0).tolist()
     for i, ci in zip(range(b), counts_init):
-        # cur_idxs = change_indices[change_indices[:, 0] == i, 1]
-        # cur_idxs = all_cur_idx[alt_lens[i]:alt_lens[i + 1]]
-        # cur_idxs = torch.cat(
-        #     [
-        #         torch.tensor([0], dtype=cur_idxs.dtype, device=cur_idxs.device),
-        #         cur_idxs + 1,
-        #         torch.tensor([h * w], dtype=cur_idxs.dtype, device=cur_idxs.device),
-        #     ]
-        # )
-        # btw_idxs = cur_idxs[1:] - cur_idxs[:-1]
         btw_idxs = all_btw_idx[alt_lens[i]:alt_lens[i + 1]]
         counts = [] if ci else [0]
-        # counts.extend(btw_idxs.detach().cpu().tolist())
-        # counts.extend(btw_idxs.tolist())
         counts.extend(btw_idxs)
         out.append({"size": [h, w], "counts": counts})
 
-    # alt_counts_0 = torch.cat([torch.tensor([[True]]).expand_as(diff.narrow(1, 0, 1)), diff, torch.tensor([[True]]).expand_as(diff.narrow(1, 0, 1))], dim=1)
-    # alt_counts_1 = alt_counts_0.nonzero()[:, 1]
-    # alt_counts_2 = alt_counts_1[1:] - alt_counts_1[:-1]
-    # lens = torch.tensor([len(o['counts']) for o in out])
-    # alt_lens = diff.sum(dim=1)
-    # import pdb; pdb.set_trace()
+    return out
+
+
+def mask_to_rle_pytorch(tensor: torch.Tensor) -> List[Dict[str, Any]]:
+    """
+    Encodes masks to an uncompressed RLE, in the format expected by
+    pycoco tools.
+    """
+    # Put in fortran order and flatten h,w
+    b, h, w = tensor.shape
+    tensor = tensor.permute(0, 2, 1).flatten(1)
+
+    # Compute change indices
+    diff = tensor[:, 1:] ^ tensor[:, :-1]
+    change_indices = diff.nonzero()
+
+    # Encode run length
+    out = []
+    for i in range(b):
+        cur_idxs = change_indices[change_indices[:, 0] == i, 1]
+        cur_idxs = torch.cat(
+            [
+                torch.tensor([0], dtype=cur_idxs.dtype, device=cur_idxs.device),
+                cur_idxs + 1,
+                torch.tensor([h * w], dtype=cur_idxs.dtype, device=cur_idxs.device),
+            ]
+        )
+        btw_idxs = cur_idxs[1:] - cur_idxs[:-1]
+        counts = [] if tensor[i, 0] == 0 else [0]
+        counts.extend(btw_idxs.detach().cpu().tolist())
     return out
 
 
