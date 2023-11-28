@@ -127,7 +127,7 @@ def mask_to_rle_pytorch_2(tensor: torch.Tensor) -> List[Dict[str, Any]]:
     out = []
     counts_init = (tensor[:, 0] == 0).tolist()
     for i, ci in zip(range(b), counts_init):
-        btw_idxs = all_btw_idx[alt_lens[i]:alt_lens[i + 1]]
+        btw_idxs = all_btw_idx[alt_lens[i]:alt_lens[i + 1]][:-1]
         counts = [] if ci else [0]
         counts.extend(btw_idxs)
         out.append({"size": [h, w], "counts": counts})

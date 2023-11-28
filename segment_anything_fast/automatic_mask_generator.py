@@ -24,6 +24,7 @@ from .utils.amg import (
     generate_crop_boxes,
     is_box_near_crop_edge,
     mask_to_rle_pytorch,
+    mask_to_rle_pytorch_2,
     remove_small_regions,
     rle_to_mask,
     uncrop_boxes_xyxy,
@@ -247,6 +248,9 @@ class SamAutomaticMaskGenerator:
             data.cat(batch_data)
             del batch_data
         data["rles"] = mask_to_rle_pytorch(data["masks"])
+        rles_2 = mask_to_rle_pytorch_2(data["masks"])
+        for i in range(len(data["rles"])):
+            torch.testing.assert_close(torch.tensor(data["rles"][i]['counts']), torch.tensor(rles_2[i]['counts']))
         self.predictor.reset_image()
 
         # Remove duplicates within this crop.
