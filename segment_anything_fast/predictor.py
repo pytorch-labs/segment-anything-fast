@@ -54,7 +54,7 @@ class SamPredictor:
 
         # Transform the image to the form expected by the model
         input_image = self.transform.apply_image(image)
-        input_image_torch = torch.as_tensor(input_image).pin_memory().to(device=self.device, non_blocking=True)
+        input_image_torch = torch.as_tensor(input_image, device=self.device)
         input_image_torch = input_image_torch.permute(2, 0, 1).contiguous()[None, :, :, :]
 
         self.set_torch_image(input_image_torch, image.shape[:2])
@@ -219,44 +219,37 @@ class SamPredictor:
         else:
             points = None
 
-        with torch.autograd.profiler.record_function("predict_torch 0"):
-            # Embed prompts
-            sparse_embeddings, dense_embeddings = self.model.prompt_encoder(
-                points=points,
-                boxes=boxes,
-                masks=mask_input,
-            )
-        # with torch.autograd.profiler.record_function("predict_torch 1"):
-        #     sparse_embeddings = sparse_embeddings.to(point_coords.dtype)
-        #     dense_embeddings = dense_embeddings.to(point_coords.dtype)
+        # Embed prompts
+        sparse_embeddings, dense_embeddings = self.model.prompt_encoder(
+            points=points,
+            boxes=boxes,
+            masks=mask_input,
+        )
 
-        with torch.autograd.profiler.record_function("predict_torch 2"):
-            # Predict masks
-            low_res_masks, iou_predictions = self.model.mask_decoder(
-                image_embeddings=self.features,
-                image_pe=self.model.prompt_encoder.get_dense_pe(),
-                sparse_prompt_embeddings=sparse_embeddings,
-                dense_prompt_embeddings=dense_embeddings,
-                multimask_output=multimask_output,
-            )
+        # Predict masks
+        low_res_masks, iou_predictions = self.model.mask_decoder(
+            image_embeddings=self.features,
+            image_pe=self.model.prompt_encoder.get_dense_pe(),
+            sparse_prompt_embeddings=sparse_embeddings,
+            dense_prompt_embeddings=dense_embeddings,
+            multimask_output=multimask_output,
+        )
 
-        with torch.autograd.profiler.record_function("predict_torch 3"):
-            if low_res_masks.is_nested:
-                masks = []
-                for lrm, input_size, original_size in zip(low_res_masks.unbind(), self.input_sizes, self.original_sizes, strict=True):
-                    # Upscale the masks to the original image resolution
-                    m = self.model.postprocess_masks(lrm, input_size, original_size)
-                    masks.append(m)
-                masks = torch.nested.nested_tensor(masks, layout=torch.strided)
-            else:
+        if low_res_masks.is_nested:
+            masks = []
+            for lrm, input_size, original_size in zip(low_res_masks.unbind(), self.input_sizes, self.original_sizes, strict=True):
                 # Upscale the masks to the original image resolution
-                masks = self.model.postprocess_masks(low_res_masks, self.input_size, self.original_size)
+                m = self.model.postprocess_masks(lrm, input_size, original_size)
+                masks.append(m)
+            masks = torch.nested.nested_tensor(masks, layout=torch.strided)
+        else:
+            # Upscale the masks to the original image resolution
+            masks = self.model.postprocess_masks(low_res_masks, self.input_size, self.original_size)
 
-        with torch.autograd.profiler.record_function("predict_torch 4"):
-            if not return_logits:
-                masks = masks > self.model.mask_threshold
+        if not return_logits:
+            masks = masks > self.model.mask_threshold
 
-            return masks, iou_predictions, low_res_masks
+        return masks, iou_predictions, low_res_masks
 
     def get_image_embedding(self) -> torch.Tensor:
         """
