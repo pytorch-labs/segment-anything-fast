@@ -294,7 +294,7 @@ class SamAutomaticMaskGenerator:
             point_coords=nt_in_points,
             point_labels=nt_in_labels,
             multimask_output=True,
-            # return_logits=True,
+            return_logits=True,
         )
 
         data = MaskData()
