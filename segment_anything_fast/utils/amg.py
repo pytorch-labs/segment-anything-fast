@@ -118,7 +118,7 @@ def mask_to_rle_pytorch_2(tensor: torch.Tensor) -> List[Dict[str, Any]]:
     diff = torch.cat([a, diff, a], dim=1)
     change_indices = diff.nonzero()
 
-    alt_lens = torch.cumsum(torch.cat([torch.tensor([0]).pin_memory().cuda(), diff.sum(dim=1)]), dim=0).tolist()
+    alt_lens = diff.sum(dim=1).tolist()
 
     all_cur_idx = change_indices[:, 1]
     all_btw_idx = torch.cat([all_cur_idx[1:], all_cur_idx[:1]]) - all_cur_idx
@@ -127,8 +127,10 @@ def mask_to_rle_pytorch_2(tensor: torch.Tensor) -> List[Dict[str, Any]]:
     # Encode run length
     out = []
     counts_init = (tensor[:, 0] == 0).tolist()
+    offset = 0
     for i, ci in zip(range(b), counts_init):
-        btw_idxs = all_btw_idx[alt_lens[i]:alt_lens[i + 1]][:-1]
+        btw_idxs = all_btw_idx[offset:offset + alt_lens[i]][:-1]
+        offset += alt_lens[i]
         counts = [] if ci else [0]
         counts.extend(btw_idxs)
         out.append({"size": [h, w], "counts": counts})

@@ -58,4 +58,4 @@ plt.tight_layout()
 plt.savefig('dog_mask_fast.png', format='png')
 
 print(f"fast: {benchmark_torch_function_in_milliseconds(mask_generator.generate, image)}ms")
-# profiler_runner(f"amg_example_trace.json.gz", mask_generator.generate, image)
+profiler_runner(f"amg_example_trace.json.gz", mask_generator.generate, image)
