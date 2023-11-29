@@ -2,6 +2,23 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import cv2
+import torch.utils.benchmark as benchmark
+
+def profiler_runner(path, fn, *args, **kwargs):
+    with torch.profiler.profile(
+            activities=[torch.profiler.ProfilerActivity.CPU,
+                        torch.profiler.ProfilerActivity.CUDA],
+            record_shapes=True) as prof:
+        result = fn(*args, **kwargs)
+    print(f"Saving trace under {path}")
+    prof.export_chrome_trace(path)
+    return result
+
+def benchmark_torch_function_in_milliseconds(f, *args, **kwargs):
+    t0 = benchmark.Timer(
+        stmt="f(*args, **kwargs)", globals={"args": args, "kwargs": kwargs, "f": f}
+    )
+    return t0.blocked_autorange().mean * 1e3
 
 def show_anns(anns):
     if len(anns) == 0:
@@ -18,29 +35,29 @@ def show_anns(anns):
         img[m] = color_mask
     ax.imshow(img)
 
+def save_masks(masks, filename):
+    plt.figure(figsize=(image.shape[1]/100., image.shape[0]/100.), dpi=100)
+    plt.imshow(image)
+    show_anns(masks)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.savefig(f'{filename}.png', format='png')
+
 image = cv2.imread('dog.jpg')
 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
 
-from segment_anything_fast import sam_model_registry, SamAutomaticMaskGenerator
-from segment_anything_fast.tools import apply_eval_dtype_predictor
+from segment_anything_fast import sam_model_registry, sam_model_fast_registry, SamAutomaticMaskGenerator
 
 sam_checkpoint = "checkpoints/sam_vit_h_4b8939.pth"
 model_type = "vit_h"
-
 device = "cuda"
+baseline = True
 
-sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+sam = sam_model_fast_registry[model_type](checkpoint=sam_checkpoint, compile_mode='default')
 sam.to(device=device)
-
 mask_generator = SamAutomaticMaskGenerator(sam)
-mask_generator.predictor = apply_eval_dtype_predictor(mask_generator.predictor, torch.bfloat16)
-
 masks = mask_generator.generate(image)
-
-plt.figure(figsize=(image.shape[1]/100., image.shape[0]/100.), dpi=100)
-plt.imshow(image)
-show_anns(masks)
-plt.axis('off')
-plt.tight_layout()
-plt.savefig('dog_mask_fast.png', format='png')
+save_masks(masks, 'dog_mask_fast_fast')
+print(f"fast: {benchmark_torch_function_in_milliseconds(mask_generator.generate, image)}ms")
+profiler_runner(f"asdf_True.json.gz", mask_generator.generate, image)
