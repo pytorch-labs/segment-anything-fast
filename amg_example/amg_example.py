@@ -35,14 +35,6 @@ def show_anns(anns):
         img[m] = color_mask
     ax.imshow(img)
 
-def save_masks(masks, filename):
-    plt.figure(figsize=(image.shape[1]/100., image.shape[0]/100.), dpi=100)
-    plt.imshow(image)
-    show_anns(masks)
-    plt.axis('off')
-    plt.tight_layout()
-    plt.savefig(f'{filename}.png', format='png')
-
 image = cv2.imread('dog.jpg')
 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -52,12 +44,18 @@ from segment_anything_fast import sam_model_registry, sam_model_fast_registry, S
 sam_checkpoint = "checkpoints/sam_vit_h_4b8939.pth"
 model_type = "vit_h"
 device = "cuda"
-baseline = True
 
 sam = sam_model_fast_registry[model_type](checkpoint=sam_checkpoint, compile_mode='default')
 sam.to(device=device)
 mask_generator = SamAutomaticMaskGenerator(sam)
 masks = mask_generator.generate(image)
-save_masks(masks, 'dog_mask_fast')
+
+plt.figure(figsize=(image.shape[1]/100., image.shape[0]/100.), dpi=100)
+plt.imshow(image)
+show_anns(masks)
+plt.axis('off')
+plt.tight_layout()
+plt.savefig('dog_mask_fast.png', format='png')
+
 print(f"fast: {benchmark_torch_function_in_milliseconds(mask_generator.generate, image)}ms")
 profiler_runner(f"asdf_True.json.gz", mask_generator.generate, image)
