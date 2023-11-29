@@ -297,18 +297,22 @@ class SamAutomaticMaskGenerator:
             # return_logits=True,
         )
 
-        all_batch_data = MaskData()
-        for masks, iou_preds in zip(nt_masks.unbind(), nt_iou_preds.unbind()):
-            self._process_batch_2(masks, iou_preds, im_size, crop_box, orig_size)
+        data = MaskData()
+        for masks, iou_preds, points in zip(nt_masks.unbind(), nt_iou_preds.unbind(), all_points):
+            batch_data = self._process_batch_2(masks, iou_preds, points, im_size, crop_box, orig_size)
+            data.cat(batch_data)
+        return data
 
     def _process_batch_2(
         self,
         masks: torch.Tensor,
         iou_preds: torch.Tensor,
+        points: torch.Tensor,
         im_size: Tuple[int, ...],
         crop_box: List[int],
         orig_size: Tuple[int, ...],
     ) -> MaskData:
+        orig_h, orig_w = orig_size
         # Serialize predictions and store in MaskData
         data = MaskData(
             masks=masks.flatten(0, 1),
@@ -346,8 +350,7 @@ class SamAutomaticMaskGenerator:
         # Keeping the masks around is faster, even though it uses more memory.
         # del data["masks"]
 
-        all_batch_data.cat(data)
-        return all_batch_data
+        return data
 
     @staticmethod
     def postprocess_small_regions(
