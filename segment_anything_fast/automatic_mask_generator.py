@@ -262,7 +262,6 @@ class SamAutomaticMaskGenerator:
 
         return data
 
-    # TODO: Batch this up
     def _process_batch(
         self,
         all_points: List[np.ndarray],
@@ -276,11 +275,10 @@ class SamAutomaticMaskGenerator:
             # Run model on this batch
             transformed_points = self.predictor.transform.apply_coords(points, im_size)
             in_points = torch.as_tensor(transformed_points) #, device=self.predictor.device)
-            # in_labels = torch.ones(in_points.shape[0], dtype=torch.int, device=in_points.device)
-            # nt_in_points.append(in_points[:, None, :])
             nt_in_points.append(in_points)
 
         nt_in_points = torch.nested.nested_tensor(nt_in_points, layout=torch.jagged, pin_memory=True).to(device=self.predictor.device, non_blocking=True)
+        # The call to prod is a workaround to share jagged sizes between two NestedTensors.
         nt_in_labels = torch.ones_like(nt_in_points, dtype=torch.int).prod(dim=-1, keepdim=True)
         nt_in_points = nt_in_points.unsqueeze(2)
 
@@ -299,6 +297,7 @@ class SamAutomaticMaskGenerator:
             data.cat(batch_data)
         return data
 
+    # TODO: Batch this up
     def _process_batch_2(
         self,
         masks: torch.Tensor,

@@ -14,12 +14,6 @@ def profiler_runner(path, fn, *args, **kwargs):
     prof.export_chrome_trace(path)
     return result
 
-def benchmark_torch_function_in_milliseconds(f, *args, **kwargs):
-    t0 = benchmark.Timer(
-        stmt="f(*args, **kwargs)", globals={"args": args, "kwargs": kwargs, "f": f}
-    )
-    return t0.blocked_autorange().mean * 1e3
-
 def show_anns(anns):
     if len(anns) == 0:
         return
@@ -45,7 +39,7 @@ sam_checkpoint = "checkpoints/sam_vit_h_4b8939.pth"
 model_type = "vit_h"
 device = "cuda"
 
-sam = sam_model_fast_registry[model_type](checkpoint=sam_checkpoint) #, compile_mode='default', dtype=torch.bfloat16)
+sam = sam_model_fast_registry[model_type](checkpoint=sam_checkpoint)
 sam.to(device=device)
 mask_generator = SamAutomaticMaskGenerator(sam)
 
