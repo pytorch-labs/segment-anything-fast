@@ -179,7 +179,6 @@ class SamAutomaticMaskGenerator:
         else:
             mask_data["segmentations"] = mask_data["rles"]
 
-        # mask_data["rles"] = mask_to_rle_pytorch(data["masks"].cpu())
         # Write mask records
         curr_anns = []
         for idx in range(len(mask_data["segmentations"])):
@@ -242,15 +241,13 @@ class SamAutomaticMaskGenerator:
         points_for_image = self.point_grids[crop_layer_idx] * points_scale
 
         # Generate masks for this crop in batches
-        data = MaskData()
-        for (points,) in batch_iterator(self.points_per_batch, points_for_image):
-            batch_data = self._process_batch(points, cropped_im_size, crop_box, orig_size)
-            data.cat(batch_data)
-            del batch_data
-        data["rles"] = mask_to_rle_pytorch(data["masks"])
-        rles_2 = mask_to_rle_pytorch_2(data["masks"])
-        for i in range(len(data["rles"])):
-            torch.testing.assert_close(torch.tensor(data["rles"][i]['counts']), torch.tensor(rles_2[i]['counts']))
+        all_points = [points for (points,) in batch_iterator(self.points_per_batch, points_for_image)]
+        data = self._process_batch(all_points, cropped_im_size, crop_box, orig_size)
+        data["rles"] = mask_to_rle_pytorch_2(data["masks"])
+        # data["rles"] = mask_to_rle_pytorch(data["masks"])
+        # rles_2 = mask_to_rle_pytorch_2(data["masks"])
+        # for i in range(len(data["rles"])):
+        #     torch.testing.assert_close(torch.tensor(data["rles"][i]['counts']), torch.tensor(rles_2[i]['counts']))
         self.predictor.reset_image()
 
         # Remove duplicates within this crop.
@@ -272,61 +269,79 @@ class SamAutomaticMaskGenerator:
     # TODO: Batch this up
     def _process_batch(
         self,
-        points: np.ndarray,
+        all_points: List[np.ndarray],
         im_size: Tuple[int, ...],
         crop_box: List[int],
         orig_size: Tuple[int, ...],
     ) -> MaskData:
         orig_h, orig_w = orig_size
+        nt_in_points = []
+        with torch.autograd.profiler.record_function("process batch 0"):
+            for points in all_points:
 
-        # Run model on this batch
-        transformed_points = self.predictor.transform.apply_coords(points, im_size)
-        in_points = torch.as_tensor(transformed_points, device=self.predictor.device)
-        in_labels = torch.ones(in_points.shape[0], dtype=torch.int, device=in_points.device)
+                # Run model on this batch
+                transformed_points = self.predictor.transform.apply_coords(points, im_size)
+                in_points = torch.as_tensor(transformed_points) #, device=self.predictor.device)
+                # in_labels = torch.ones(in_points.shape[0], dtype=torch.int, device=in_points.device)
+                # nt_in_points.append(in_points[:, None, :])
+                nt_in_points.append(in_points)
 
-        masks, iou_preds, _ = self.predictor.predict_torch(
-            in_points[:, None, :],
-            in_labels[:, None],
-            multimask_output=True,
-            return_logits=True,
-        )
+            nt_in_points = torch.nested.nested_tensor(nt_in_points, layout=torch.jagged, device=self.predictor.device)
+            nt_in_labels = torch.ones_like(nt_in_points, dtype=torch.int).prod(dim=-1, keepdim=True)
+            nt_in_points = nt_in_points.unsqueeze(2)
 
-        # Serialize predictions and store in MaskData
-        data = MaskData(
-            masks=masks.flatten(0, 1),
-            iou_preds=iou_preds.flatten(0, 1),
-            points=torch.as_tensor(points.repeat(masks.shape[1], axis=0)),
-        )
-        del masks
+        with torch.autograd.profiler.record_function("process batch 1"):
+            self.predictor.input_sizes = [self.predictor.input_size for _ in range(len(nt_in_points))]
+            self.predictor.original_sizes = [self.predictor.original_size for _ in range(len(nt_in_points))]
+            nt_masks, nt_iou_preds, _ = self.predictor.predict_torch(
+                point_coords=nt_in_points,
+                point_labels=nt_in_labels,
+                multimask_output=True,
+                # return_logits=True,
+            )
 
-        # Filter by predicted IoU
-        if self.pred_iou_thresh > 0.0:
-            keep_mask = data["iou_preds"] > self.pred_iou_thresh
-            data.filter(keep_mask)
+        with torch.autograd.profiler.record_function("process batch 2"):
+            all_batch_data = MaskData()
+            for masks, iou_preds in zip(nt_masks.unbind(), nt_iou_preds.unbind()):
+                # Serialize predictions and store in MaskData
+                data = MaskData(
+                    masks=masks.flatten(0, 1),
+                    iou_preds=iou_preds.flatten(0, 1),
+                    points=torch.as_tensor(points.repeat(masks.shape[1], axis=0)),
+                )
+                del masks
 
-        # Calculate stability score
-        data["stability_score"] = calculate_stability_score(
-            data["masks"], self.predictor.model.mask_threshold, self.stability_score_offset
-        )
-        if self.stability_score_thresh > 0.0:
-            keep_mask = data["stability_score"] >= self.stability_score_thresh
-            data.filter(keep_mask)
+                # Filter by predicted IoU
+                if self.pred_iou_thresh > 0.0:
+                    keep_mask = data["iou_preds"] > self.pred_iou_thresh
+                    data.filter(keep_mask)
 
-        # Threshold masks and calculate boxes
-        data["masks"] = data["masks"] > self.predictor.model.mask_threshold
-        data["boxes"] = batched_mask_to_box(data["masks"])
+                # Calculate stability score
+                data["stability_score"] = calculate_stability_score(
+                    data["masks"], self.predictor.model.mask_threshold, self.stability_score_offset
+                )
+                if self.stability_score_thresh > 0.0:
+                    keep_mask = data["stability_score"] >= self.stability_score_thresh
+                    data.filter(keep_mask)
 
-        # Filter boxes that touch crop boundaries
-        keep_mask = ~is_box_near_crop_edge(data["boxes"], crop_box, [0, 0, orig_w, orig_h])
-        if not torch.all(keep_mask):
-            data.filter(keep_mask)
+                # Threshold masks and calculate boxes
+                data["masks"] = data["masks"] > self.predictor.model.mask_threshold
+                data["boxes"] = batched_mask_to_box(data["masks"])
 
-        # Compress to RLE
-        data["masks"] = uncrop_masks(data["masks"], crop_box, orig_h, orig_w)
-        # data["rles"] = mask_to_rle_pytorch(data["masks"].cpu())
-        # del data["masks"]
+                # Filter boxes that touch crop boundaries
+                keep_mask = ~is_box_near_crop_edge(data["boxes"], crop_box, [0, 0, orig_w, orig_h])
+                if not torch.all(keep_mask):
+                    data.filter(keep_mask)
 
-        return data
+                # Compress to RLE
+                data["masks"] = uncrop_masks(data["masks"], crop_box, orig_h, orig_w)
+                # Doing this once at the end across all masks.
+                # data["rles"] = mask_to_rle_pytorch(data["masks"].cpu())
+                # Keeping the masks around is faster, even though it uses more memory.
+                # del data["masks"]
+
+                all_batch_data.cat(data)
+            return all_batch_data
 
     @staticmethod
     def postprocess_small_regions(

@@ -58,6 +58,7 @@ sam = sam_model_fast_registry[model_type](checkpoint=sam_checkpoint, compile_mod
 sam.to(device=device)
 mask_generator = SamAutomaticMaskGenerator(sam)
 masks = mask_generator.generate(image)
+import pdb; pdb.set_trace()
 save_masks(masks, 'dog_mask_fast_fast')
 print(f"fast: {benchmark_torch_function_in_milliseconds(mask_generator.generate, image)}ms")
 profiler_runner(f"asdf_True.json.gz", mask_generator.generate, image)
