@@ -64,23 +64,23 @@ def _apply_eval_dtype_sam(model, dtype):
 
     return model
 
-def build_sam_fast_vit_h(checkpoint=None, compile_mode='max-autotune'):
+def build_sam_fast_vit_h(checkpoint=None, compile_mode='max-autotune', dtype=torch.bfloat16):
     sam = build_sam_vit_h(checkpoint)
-    sam = _apply_eval_dtype_sam(sam, torch.bfloat16)
+    sam = _apply_eval_dtype_sam(sam, dtype)
     sam.image_encoder = torch.compile(sam.image_encoder, mode=compile_mode)
     return sam
 
 build_sam_fast = build_sam_fast_vit_h
 
-def build_sam_fast_vit_l(checkpoint=None, compile_mode='max-autotune'):
+def build_sam_fast_vit_l(checkpoint=None, compile_mode='max-autotune', dtype=torch.bfloat16):
     sam = build_sam_vit_l(checkpoint)
-    sam = _apply_eval_dtype_sam(sam, torch.bfloat16)
+    sam = _apply_eval_dtype_sam(sam, dtype)
     sam.image_encoder = torch.compile(sam.image_encoder, mode=compile_mode)
     return sam
 
-def build_sam_fast_vit_b(checkpoint=None, compile_mode='max-autotune'):
+def build_sam_fast_vit_b(checkpoint=None, compile_mode='max-autotune', dtype=torch.bfloat16):
     sam = build_sam_vit_b(checkpoint)
-    sam = _apply_eval_dtype_sam(sam, torch.bfloat16)
+    sam = _apply_eval_dtype_sam(sam, dtype)
     sam.image_encoder = torch.compile(sam.image_encoder, mode=compile_mode)
     return sam
 

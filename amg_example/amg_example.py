@@ -45,7 +45,7 @@ sam_checkpoint = "checkpoints/sam_vit_h_4b8939.pth"
 model_type = "vit_h"
 device = "cuda"
 
-sam = sam_model_fast_registry[model_type](checkpoint=sam_checkpoint, compile_mode='default')
+sam = sam_model_fast_registry[model_type](checkpoint=sam_checkpoint, compile_mode='default', dtype=torch.bfloat16)
 sam.to(device=device)
 mask_generator = SamAutomaticMaskGenerator(sam)
 masks = mask_generator.generate(image)
@@ -58,4 +58,4 @@ plt.tight_layout()
 plt.savefig('dog_mask_fast.png', format='png')
 
 print(f"fast: {benchmark_torch_function_in_milliseconds(mask_generator.generate, image)}ms")
-profiler_runner(f"asdf_True.json.gz", mask_generator.generate, image)
+# profiler_runner(f"amg_example_trace.json.gz", mask_generator.generate, image)
