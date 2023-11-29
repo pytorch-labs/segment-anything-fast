@@ -45,11 +45,16 @@ sam_checkpoint = "checkpoints/sam_vit_h_4b8939.pth"
 model_type = "vit_h"
 device = "cuda"
 
-sam = sam_model_fast_registry[model_type](checkpoint=sam_checkpoint, compile_mode='default', dtype=torch.bfloat16)
+sam = sam_model_fast_registry[model_type](checkpoint=sam_checkpoint) #, compile_mode='default', dtype=torch.bfloat16)
 sam.to(device=device)
 mask_generator = SamAutomaticMaskGenerator(sam)
+
+# Run thrice for warmup
+masks = mask_generator.generate(image)
+masks = mask_generator.generate(image)
 masks = mask_generator.generate(image)
 
+# Save an example
 plt.figure(figsize=(image.shape[1]/100., image.shape[0]/100.), dpi=100)
 plt.imshow(image)
 show_anns(masks)
@@ -57,5 +62,16 @@ plt.axis('off')
 plt.tight_layout()
 plt.savefig('dog_mask_fast.png', format='png')
 
-print(f"fast: {benchmark_torch_function_in_milliseconds(mask_generator.generate, image)}ms")
+# Benchmark
+torch.cuda.synchronize()
+start_event = torch.cuda.Event(enable_timing=True)
+end_event = torch.cuda.Event(enable_timing=True)
+start_event.record()
+for _ in range(10):
+    masks = mask_generator.generate(image)
+end_event.record()
+torch.cuda.synchronize()
+print(start_event.elapsed_time(end_event) / 10.)
+
+# Save a GPU trace
 profiler_runner(f"amg_example_trace.json.gz", mask_generator.generate, image)

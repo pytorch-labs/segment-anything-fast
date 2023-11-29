@@ -244,10 +244,6 @@ class SamAutomaticMaskGenerator:
         all_points = [points for (points,) in batch_iterator(self.points_per_batch, points_for_image)]
         data = self._process_batch(all_points, cropped_im_size, crop_box, orig_size)
         data["rles"] = mask_to_rle_pytorch_2(data["masks"])
-        # data["rles"] = mask_to_rle_pytorch(data["masks"])
-        # rles_2 = mask_to_rle_pytorch_2(data["masks"])
-        # for i in range(len(data["rles"])):
-        #     torch.testing.assert_close(torch.tensor(data["rles"][i]['counts']), torch.tensor(rles_2[i]['counts']))
         self.predictor.reset_image()
 
         # Remove duplicates within this crop.
@@ -284,7 +280,7 @@ class SamAutomaticMaskGenerator:
             # nt_in_points.append(in_points[:, None, :])
             nt_in_points.append(in_points)
 
-        nt_in_points = torch.nested.nested_tensor(nt_in_points, layout=torch.jagged, device=self.predictor.device)
+        nt_in_points = torch.nested.nested_tensor(nt_in_points, layout=torch.jagged, pin_memory=True).to(device=self.predictor.device, non_blocking=True)
         nt_in_labels = torch.ones_like(nt_in_points, dtype=torch.int).prod(dim=-1, keepdim=True)
         nt_in_points = nt_in_points.unsqueeze(2)
 
