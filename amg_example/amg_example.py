@@ -41,7 +41,7 @@ device = "cuda"
 
 sam = sam_model_fast_registry[model_type](checkpoint=sam_checkpoint)
 sam.to(device=device)
-mask_generator = SamAutomaticMaskGenerator(sam)
+mask_generator = SamAutomaticMaskGenerator(sam, process_batch_size=8)
 
 # Run thrice for warmup
 masks = mask_generator.generate(image)
@@ -69,3 +69,10 @@ print(start_event.elapsed_time(end_event) / 10.)
 
 # Save a GPU trace
 profiler_runner(f"amg_example_trace.json.gz", mask_generator.generate, image)
+
+# Write out memory usage
+max_memory_allocated_bytes = torch.cuda.max_memory_allocated()
+_, total_memory = torch.cuda.mem_get_info()
+max_memory_allocated_percentage = int(100 * (max_memory_allocated_bytes / total_memory))
+max_memory_allocated_bytes = max_memory_allocated_bytes >> 20
+print(f"memory(MiB): {max_memory_allocated_bytes} memory(%): {max_memory_allocated_percentage}")
