@@ -154,7 +154,8 @@ def _autotune(configs, function):
             t0 = benchmark.Timer(
                 stmt="f(*args, **kwargs)", globals={"args": args, "kwargs": kwargs, "f": f}
             )
-        except:
+        except Exception as e:
+            print(f"Error occured: {e}")
             return None
         return t0.blocked_autorange().mean * 1e6
 
