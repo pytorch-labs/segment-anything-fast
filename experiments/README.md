@@ -1,145 +1,149 @@
-To run the experiments you need to update the script paths and install fire, pandas and tqdm
+# Running Experiments Guide
+
+To run the experiments you need to update the script paths and install `fire`, `pandas` and `tqdm`
 
 ## Model Checkpoints
 
-Need checkpoints from https://github.com/facebookresearch/segment-anything
+You'll need to obtain model checkpoints from the [facebookresearch/segment-anything](https://github.com/facebookresearch/segment-anything) repository. Use the following commands to download them:
 
-wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
-
-wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
-
-## COCO2017 dataset
-
-Need to download
-
-wget http://images.cocodataset.org/zips/val2017.zip
-wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
-
-## Folder structure of experimental data
+```bash
+wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth 
+wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth 
 ```
-experiments_data/tmp
-experiments_data/tmp/sam_coco_mask_center_cache
-experiments_data/tmp/sam_eval_masks_out
-experiments_data/datasets
-experiments_data/datasets/coco2017
-experiments_data/datasets/coco2017/val2017
-experiments_data/datasets/coco2017/annotations
-experiments_data/checkpoints
+
+## COCO2017 Dataset
+
+To run experiments, you'll require the COCO2017 dataset. Download it using these commands:
+
+```bash 
+wget http://images.cocodataset.org/zips/val2017.zip 
+wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip 
 ```
-## Environment details
+
+## Folder Structure of Experimental Data
+
+Here's the folder structure you should set up for your experimental data:
+
+```plaintext
+experiments_data/ 
+├── tmp/ 
+│   ├── sam_coco_mask_center_cache/ 
+│   ├── sam_eval_masks_out/ 
+├── datasets/ 
+│   ├── coco2017/ 
+│       ├── val2017/ 
+│       ├── annotations/ 
+├── checkpoints/ 
+```
+
+## Environment Details
 
 ### Hardware
-These  experiments were run on an Amazon p4d.24xlarge instance. See the Product details of the EC2 website for the exact details. A few key highlights are
+
+These experiments were conducted on an Amazon `p4d.24xlarge` instance with the following specifications:
 
 - 8 A100 GPUs with 40960MiB running at 400W
 - 96 vCPUs
 - 1152 GiB of RAM
-- Software
 
-
-### Versions
+### Software Versions
 
 - PyTorch nightly and Python 3.10
-- https://github.com/cpuhrsch/segment-anything fork of https://github.com/facebookresearch/segment-anything with additional commits if you want to reproduce baseline and first few experiments
-- This https://github.com/pytorch-labs/segment-anything-fast
+- A fork of [facebookresearch/segment-anything](https://github.com/cpuhrsch/segment-anything) with additional commits
+- [pytorch-labs/segment-anything-fast](https://github.com/pytorch-labs/segment-anything-fast)
 
-### Installation instructions
+### Installation Instructions
 
-```
-$ conda create -n nightly20231117py310
-$ conda activate nightly20231117py310
-$ conda install python=3.10
-$ pip install https://download.pytorch.org/whl/nightly/cu121/torch-2.2.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
-$ pip install https://download.pytorch.org/whl/nightly/cu121/torchvision-0.17.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
-$ git clone https://github.com/cpuhrsch/segment-anything.git
-$ cd segment-anything
-$ pip install -e .
-$ cd ..
-$ git clone https://github.com/pytorch-labs/segment-anything-fast.git
-$ cd segment-anything-fast
-$ pip install -e .
-```
+Follow these steps to set up the required environment:
 
-If you plan to run the scripts that run the experiments from segment-anything-fast it is important to install the segment-anything fork in editable mode so that the script can switch between different commits of the fork automatically.
+```bash
 
-
-### How to run experiments
-
-```
-$ python run_experiments.py 16 vit_b <pytorch_github> <segment-anything_github> <path_to_experiments_data> --run-experiments --num-workers 32
+conda create -n nightly20231117py310
+conda activate nightly20231117py310
+conda install python=3.10
+pip install https://download.pytorch.org/whl/nightly/cu121/torch-2.2.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
+pip install https://download.pytorch.org/whl/nightly/cu121/torchvision-0.17.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
+git clone https://github.com/cpuhrsch/segment-anything.git
+cd segment-anything
+pip install -e .
+cd ..
+git clone https://github.com/pytorch-labs/segment-anything-fast.git
+cd segment-anything-fast
+pip install -e .
 ```
 
-If at any point you run into issue, please note that you can increase verbosity by adding `--capture_output False` to above command. Also, please don't hesitate to open an issue.
+If you intend to run scripts from segment-anything-fast, install the segment-anything fork in editable mode to allow switching between different commits of the fork automatically.
 
+### How to Run Experiments
+
+Use this command to run experiments:
+
+```bash
+python run_experiments.py 16 vit_b <pytorch_github> <segment-anything_github> <path_to_experiments_data> --run-experiments --num-workers 32 
+```
+
+If you encounter any issues, add `--capture_output False` to increase verbosity, and feel free to open an issue.
 
 ### Data
-We are using the COCO2017 Validation (Val images) dataset. We use this dataset to serve as a somewhat realistic distribution of input images and aim to measure a) accuracy and b) performance.
-Measurement
-Accuracy
-Our main goal is to verify that our performance optimizations do not degrade the accuracy of the model. We do not aim to reproduce any paper results or aim to make statements about the accuracy of this model on the dataset. This measurement serves as an additional integration test in conjunction with numerous unit and other separate integration tests.
 
-We calculate the center points of the mask annotations using a rudimentary version of https://arxiv.org/pdf/2304.02643.pdf, section D.1.Point Sampling ([code](https://github.com/pytorch-labs/segment-anything-fast/blob/67d5c894569e99b9fdba55cfcf2f724be9f68994/experiments/data.py#L10-L120)). These center points serve as annotations per image. Note that the number of masks and thus number of annotations per image vary.
+We utilize the COCO2017 Validation (Val images) dataset for these experiments. It provides a realistic distribution of input images for measuring accuracy and performance.
 
-These images and annotations are given to the predict_torch method of an instance of SamPredictor to predict masks. These are then compared to the ground truth masks using the Intersection over Union (IoU) metric ([code](https://github.com/pytorch-labs/segment-anything-fast/blob/67d5c894569e99b9fdba55cfcf2f724be9f68994/experiments/metrics.py#L4-L22)). We calculate the mean IoU (mIoU) metric over the entire 5000 images of the validation dataset to track accuracy.
-Performance
-Our goal is to measure the runtime of PyTorch models. We purposefully exclude data movements or calculation of the metrics. Specifically we measure the execution time on the GPU of running the image encoder (e.g. vit_h) and SamPredictor.predict_torch ([code](https://github.com/pytorch-labs/segment-anything-fast/blob/67d5c894569e99b9fdba55cfcf2f724be9f68994/experiments/eval_combo.py#L127-L165), [code](https://github.com/pytorch-labs/segment-anything-fast/blob/67d5c894569e99b9fdba55cfcf2f724be9f68994/experiments/eval_combo.py#L68-L99)).
+### Measurement
 
-Each experiment is run in a separate Python process created from scratch. We run three batches of warmup before each experiment. This also implies that we are excluding compilation time from benchmarking. 
+#### Accuracy
 
-We measure the execution time and calculate the number of images that can be processed per image (img/s). We also measure the maximum amount of memory allocated at the end of the process using torch.cuda.max_memory_allocated.
-Tracing
+Our primary goal is to ensure that performance optimizations do not compromise model accuracy. We do not aim to replicate paper results or make claims about model accuracy on the dataset. This measurement serves as an integration test alongside unit and other integration tests.
+We calculate mask annotation center points using a simplified version of [this method](https://arxiv.org/pdf/2304.02643.pdf), section D.1.Point Sampling ([code](https://github.com/pytorch-labs/segment-anything-fast/blob/67d5c894569e99b9fdba55cfcf2f724be9f68994/experiments/data.py#L10-L120)). These points serve as annotations per image, and the number of masks and annotations per image can vary.
+These images and annotations are provided to the `predict_torch` method of a `SamPredictor` instance for mask prediction. The predictions are then compared to ground truth masks using the Intersection over Union (IoU) metric ([code](https://github.com/pytorch-labs/segment-anything-fast/blob/67d5c894569e99b9fdba55cfcf2f724be9f68994/experiments/metrics.py#L4-L22)). We calculate the mean IoU (mIoU) metric over the entire 5000 images of the validation dataset to track accuracy.
 
-We collect kernel and memory traces using PyTorch native tooling and analyze it with [Perfetto UI](https://perfetto.dev/). When collecting these traces and profiles we typically only limit us to a few batches. Otherwise the files can become very large and difficult to load.
+#### Performance
 
-### Kernel traces
+Our objective is to measure the runtime of PyTorch models. We intentionally exclude data movement or metric calculation from measurements. Specifically, we measure the GPU execution time of running the image encoder (e.g., `vit_h`) and `SamPredictor.predict_torch` ([code](https://github.com/pytorch-labs/segment-anything-fast/blob/67d5c894569e99b9fdba55cfcf2f724be9f68994/experiments/eval_combo.py#L127-L165), [code](https://github.com/pytorch-labs/segment-anything-fast/blob/67d5c894569e99b9fdba55cfcf2f724be9f68994/experiments/eval_combo.py#L68-L99)). 
+Each experiment runs in a separate Python process created from scratch. We execute three batches of warm-up before each experiment. This also means that we exclude compilation time from benchmarking. 
+We measure the execution time and calculate the number of images processed per second (img/s). We also measure the maximum amount of memory allocated at the end of the process using `torch.cuda.max_memory_allocated`.
 
-One can write a simple wrapper that runs a function under the tracer context and writes out the result to a compressed json file. The resulting chrome trace can then be analyzed with Perfetto UI.
+#### Tracing
 
-```
-def profiler_runner(path, fn, *args, **kwargs):
-    with torch.profiler.profile(
-            activities=[torch.profiler.ProfilerActivity.CPU,
-                        torch.profiler.ProfilerActivity.CUDA],
-            record_shapes=True) as prof:
-        result = fn(*args, **kwargs)
-    prof.export_chrome_trace(path)
-    return result
-```
+We collect kernel and memory traces using PyTorch native tooling and analyze them with [Perfetto UI](https://perfetto.dev/). We typically limit the collection to a few batches to avoid generating excessively large files.
 
-It can be very useful to annotate certain regions in these traces to map (pieces of) the code to the overall traces. For this we frequently use record_function. Consider the following as an example.
+##### Kernel Traces
 
-```
-with torch.autograd.profiler.record_function("timed region"):
-    with torch.autograd.profiler.record_function("image encoder"):
-        features_batch = encoder(input_image_batch)
-        features_batch = features_batch[:orig_input_image_batch_size]
+You can create a simple wrapper to run a function under the tracer context and write the result to a compressed JSON file. The resulting Chrome trace can be analyzed with Perfetto UI. Here's an example:
 
-    with torch.autograd.profiler.record_function("nt predict_torch"):
-        predictor.reset_image()
-[...]
+```python
+def profiler_runner(path, fn, *args, **kwargs): 
+    with torch.profiler.profile( 
+            activities=[torch.profiler.ProfilerActivity.CPU, 
+                        torch.profiler.ProfilerActivity.CUDA], 
+            record_shapes=True) as prof: 
+        result = fn(*args, **kwargs) 
+    prof.export_chrome_trace(path) 
+    return result 
 ```
 
-### Memory profiles
+It's useful to annotate specific regions in these traces to map code segments to the overall traces. For this, we frequently use `record_function`. See the example in the provided code.
 
-We record the memory history and use memory_viz.py to convert the result into a human readable html file.
+##### Memory Profiles
 
-```
-def memory_runner(path, fn, *args, **kwargs):
-    print("Start memory recording")
-    torch.cuda.synchronize()
-    torch.cuda.memory._record_memory_history(
+We record memory history and use `memory_viz.py` to convert the result into a human-readable HTML file. Here's an example:
+
+```python
+def memory_runner(path, fn, *args, **kwargs): 
+    print("Start memory recording") 
+    torch.cuda.synchronize() 
+    torch.cuda.memory._record_memory_history( 
         True, 
-        trace_alloc_max_entries=100000,           
-        trace_alloc_record_context=True
-    )
-    result = fn(*args, **kwargs)
-    torch.cuda.synchronize()
-    snapshot = torch.cuda.memory._snapshot()
-    print("Finish memory recording")
-    import pickle
-    with open(path, 'wb') as f:
-        pickle.dump(snapshot, f)
-    # Use to convert pickle file into html
-    # python torch/cuda/_memory_viz.py trace_plot <snapshot>.pickle -o <snapshot>.html
-    return result
+        trace_alloc_max_entries=100000, 
+        trace_alloc_record_context=True 
+    ) 
+    result = fn(*args, **kwargs) 
+    torch.cuda.synchronize() 
+    snapshot = torch.cuda.memory._snapshot() 
+    print("Finish memory recording") 
+    import pickle 
+    with open(path, 'wb') as f: 
+        pickle.dump(snapshot, f) 
+    # Use to convert pickle file into HTML 
+    # python torch/cuda/_memory_viz.py trace_plot <snapshot>.pickle -o <snapshot>.html 
+    return result 
 ```
