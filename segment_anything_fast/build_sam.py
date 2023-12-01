@@ -51,7 +51,7 @@ sam_model_registry = {
     "vit_b": build_sam_vit_b,
 }
 
-def _apply_eval_dtype_sam(model, dtype=None):
+def _apply_eval_dtype_sam(model, dtype):
 
     def prep_model(model, dtype):
         if dtype is not None:
@@ -64,24 +64,24 @@ def _apply_eval_dtype_sam(model, dtype=None):
 
     return model
 
-def build_sam_fast_vit_h(checkpoint=None):
+def build_sam_fast_vit_h(checkpoint=None, compile_mode='max-autotune', dtype=torch.bfloat16):
     sam = build_sam_vit_h(checkpoint)
-    sam = _apply_eval_dtype_sam(sam)
-    sam.image_encoder = torch.compile(sam.image_encoder, mode='max-autotune')
+    sam = _apply_eval_dtype_sam(sam, dtype)
+    sam.image_encoder = torch.compile(sam.image_encoder, mode=compile_mode)
     return sam
 
 build_sam_fast = build_sam_fast_vit_h
 
-def build_sam_fast_vit_l(checkpoint=None):
+def build_sam_fast_vit_l(checkpoint=None, compile_mode='max-autotune', dtype=torch.bfloat16):
     sam = build_sam_vit_l(checkpoint)
-    sam = _apply_eval_dtype_sam(sam)
-    sam.image_encoder = torch.compile(sam.image_encoder, mode='max-autotune')
+    sam = _apply_eval_dtype_sam(sam, dtype)
+    sam.image_encoder = torch.compile(sam.image_encoder, mode=compile_mode)
     return sam
 
-def build_sam_fast_vit_b(checkpoint=None):
+def build_sam_fast_vit_b(checkpoint=None, compile_mode='max-autotune', dtype=torch.bfloat16):
     sam = build_sam_vit_b(checkpoint)
-    sam = _apply_eval_dtype_sam(sam)
-    sam.image_encoder = torch.compile(sam.image_encoder, mode='max-autotune')
+    sam = _apply_eval_dtype_sam(sam, dtype)
+    sam.image_encoder = torch.compile(sam.image_encoder, mode=compile_mode)
     return sam
 
 sam_model_fast_registry = {

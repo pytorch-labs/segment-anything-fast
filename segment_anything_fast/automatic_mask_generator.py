@@ -24,6 +24,7 @@ from .utils.amg import (
     generate_crop_boxes,
     is_box_near_crop_edge,
     mask_to_rle_pytorch,
+    mask_to_rle_pytorch_2,
     remove_small_regions,
     rle_to_mask,
     uncrop_boxes_xyxy,
@@ -49,6 +50,7 @@ class SamAutomaticMaskGenerator:
         point_grids: Optional[List[np.ndarray]] = None,
         min_mask_region_area: int = 0,
         output_mode: str = "binary_mask",
+        process_batch_size: Optional[int] = None,
     ) -> None:
         """
         Using a SAM model, generates masks for the entire image.
@@ -93,6 +95,10 @@ class SamAutomaticMaskGenerator:
             'uncompressed_rle', or 'coco_rle'. 'coco_rle' requires pycocotools.
             For large resolutions, 'binary_mask' may consume large amounts of
             memory.
+          process_batch_size (int or None): Set a batch size for the decoding step.
+            If None, all points will be batched up at once. Set a small number here
+            to decrease memory footprint. A smaller number will likely decrease
+            latency, but also decrease memory usage.
         """
 
         assert (points_per_side is None) != (
@@ -132,6 +138,7 @@ class SamAutomaticMaskGenerator:
         self.crop_n_points_downscale_factor = crop_n_points_downscale_factor
         self.min_mask_region_area = min_mask_region_area
         self.output_mode = output_mode
+        self.process_batch_size = process_batch_size
 
     @torch.no_grad()
     def generate(self, image: np.ndarray) -> List[Dict[str, Any]]:
@@ -241,10 +248,13 @@ class SamAutomaticMaskGenerator:
 
         # Generate masks for this crop in batches
         data = MaskData()
-        for (points,) in batch_iterator(self.points_per_batch, points_for_image):
-            batch_data = self._process_batch(points, cropped_im_size, crop_box, orig_size)
+        all_points = [points for (points,) in batch_iterator(self.points_per_batch, points_for_image)]
+        process_batch_size = len(all_points) if self.process_batch_size is None else self.process_batch_size
+        for i in range(0, len(all_points), process_batch_size):
+            some_points = all_points[i:i+process_batch_size]
+            batch_data = self._process_batch(some_points, cropped_im_size, crop_box, orig_size)
             data.cat(batch_data)
-            del batch_data
+        data["rles"] = mask_to_rle_pytorch_2(data["masks"])
         self.predictor.reset_image()
 
         # Remove duplicates within this crop.
@@ -265,24 +275,50 @@ class SamAutomaticMaskGenerator:
 
     def _process_batch(
         self,
-        points: np.ndarray,
+        all_points: List[np.ndarray],
         im_size: Tuple[int, ...],
         crop_box: List[int],
         orig_size: Tuple[int, ...],
     ) -> MaskData:
         orig_h, orig_w = orig_size
+        nt_in_points = []
+        for points in all_points:
+            # Run model on this batch
+            transformed_points = self.predictor.transform.apply_coords(points, im_size)
+            in_points = torch.as_tensor(transformed_points) #, device=self.predictor.device)
+            nt_in_points.append(in_points)
 
-        # Run model on this batch
-        transformed_points = self.predictor.transform.apply_coords(points, im_size)
-        in_points = torch.as_tensor(transformed_points, device=self.predictor.device)
-        in_labels = torch.ones(in_points.shape[0], dtype=torch.int, device=in_points.device)
-        masks, iou_preds, _ = self.predictor.predict_torch(
-            in_points[:, None, :],
-            in_labels[:, None],
+        nt_in_points = torch.nested.nested_tensor(nt_in_points, layout=torch.jagged, pin_memory=True).to(device=self.predictor.device, non_blocking=True)
+        # The call to prod is a workaround to share jagged sizes between two NestedTensors.
+        nt_in_labels = torch.ones_like(nt_in_points, dtype=torch.int).prod(dim=-1, keepdim=True)
+        nt_in_points = nt_in_points.unsqueeze(2)
+
+        self.predictor.input_sizes = [self.predictor.input_size for _ in range(len(nt_in_points))]
+        self.predictor.original_sizes = [self.predictor.original_size for _ in range(len(nt_in_points))]
+        nt_masks, nt_iou_preds, _ = self.predictor.predict_torch(
+            point_coords=nt_in_points,
+            point_labels=nt_in_labels,
             multimask_output=True,
             return_logits=True,
         )
 
+        data = MaskData()
+        for masks, iou_preds, points in zip(nt_masks.unbind(), nt_iou_preds.unbind(), all_points):
+            batch_data = self._process_batch_2(masks, iou_preds, points, im_size, crop_box, orig_size)
+            data.cat(batch_data)
+        return data
+
+    # TODO: Batch this up
+    def _process_batch_2(
+        self,
+        masks: torch.Tensor,
+        iou_preds: torch.Tensor,
+        points: torch.Tensor,
+        im_size: Tuple[int, ...],
+        crop_box: List[int],
+        orig_size: Tuple[int, ...],
+    ) -> MaskData:
+        orig_h, orig_w = orig_size
         # Serialize predictions and store in MaskData
         data = MaskData(
             masks=masks.flatten(0, 1),
@@ -315,8 +351,10 @@ class SamAutomaticMaskGenerator:
 
         # Compress to RLE
         data["masks"] = uncrop_masks(data["masks"], crop_box, orig_h, orig_w)
-        data["rles"] = mask_to_rle_pytorch(data["masks"])
-        del data["masks"]
+        # Doing this once at the end across all masks.
+        # data["rles"] = mask_to_rle_pytorch(data["masks"].cpu())
+        # Keeping the masks around is faster, even though it uses more memory.
+        # del data["masks"]
 
         return data
 
