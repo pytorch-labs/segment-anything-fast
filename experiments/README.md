@@ -132,22 +132,22 @@ It's useful to annotate specific regions in these traces to map code segments to
 We record memory history and use `memory_viz.py` to convert the result into a human-readable HTML file. Here's an example:
 
 ```python
-def memory_runner(path, fn, *args, **kwargs): 
-    print("Start memory recording") 
-    torch.cuda.synchronize() 
-    torch.cuda.memory._record_memory_history( 
-        True, 
-        trace_alloc_max_entries=100000, 
-        trace_alloc_record_context=True 
-    ) 
-    result = fn(*args, **kwargs) 
-    torch.cuda.synchronize() 
-    snapshot = torch.cuda.memory._snapshot() 
-    print("Finish memory recording") 
-    import pickle 
-    with open(path, 'wb') as f: 
-        pickle.dump(snapshot, f) 
-    # Use to convert pickle file into HTML 
-    # python torch/cuda/_memory_viz.py trace_plot <snapshot>.pickle -o <snapshot>.html 
-    return result 
+def memory_runner(path, fn, *args, **kwargs):
+    print("Start memory recording")
+    torch.cuda.synchronize()
+    torch.cuda.memory._record_memory_history(
+        True,
+        trace_alloc_max_entries=100000,
+        trace_alloc_record_context=True
+    )
+    result = fn(*args, **kwargs)
+    torch.cuda.synchronize()
+    snapshot = torch.cuda.memory._snapshot()
+    print("Finish memory recording")
+    import pickle
+    with open(path, 'wb') as f:
+        pickle.dump(snapshot, f)
+    # Use to convert pickle file into HTML
+    # python torch/cuda/_memory_viz.py trace_plot <snapshot>.pickle -o <snapshot>.html
+    return result
 ```
