@@ -48,9 +48,13 @@ These experiments were conducted on an Amazon `p4d.24xlarge` instance with the f
 
 ### Software Versions
 
-- PyTorch nightly and Python 3.10
-- A fork of [facebookresearch/segment-anything](https://github.com/cpuhrsch/segment-anything) with additional commits
-- [pytorch-labs/segment-anything-fast](https://github.com/pytorch-labs/segment-anything-fast)
+- **PyTorch**: Utilize the latest nightly build of PyTorch.
+- **Python**: Version 3.10.
+- **Segment-Anything Repositories**:
+  - **Main Repository**: Use the original [facebookresearch/segment-anything](https://github.com/facebookresearch/segment-anything) for foundational code and functionalities.
+  - **Fork with Enhancements**: Access the fork at [cpuhrsch/segment-anything](https://github.com/cpuhrsch/segment-anything). This fork includes additional commits essential for replicating the baseline and initial experiments.
+  - **Optimized Version**: Explore the optimized code at [pytorch-labs/segment-anything-fast](https://github.com/pytorch-labs/segment-anything-fast). This repository offers performance improvements and is crucial for later experiments.
+
 
 ### Installation Instructions
 
