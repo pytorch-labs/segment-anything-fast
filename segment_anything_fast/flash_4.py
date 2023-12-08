@@ -234,7 +234,6 @@ def _load_best_configs():
         saved_configs = cwd / "flash_4_configs.p"
         print(f"We will try to read previously created kernel configurations from {saved_configs}.")
         print("You can disable this kernel by setting SEGMENT_ANYTHING_FAST_USE_FLASH_4=0")
-        return None
     if saved_configs.is_file():
         import pickle
         with open(saved_configs, 'rb') as f:
