@@ -107,14 +107,14 @@ def _fwd_kernel_aligned(
         v = tl.load(V_block_ptr)
         # -- compute qk ---
         qk = tl.zeros([BLOCK_M, BLOCK_N], dtype=OUT_DTYPE)
-        qk += tl.dot(q, k, out_dtype=OUT_DTYPE)
+        qk += tl.dot(q, k) #, out_dtype=OUT_DTYPE)
 
         # -- compute rel_h[:, None] + rel_w[None, :] bias ---
 
         # Bias
         b0 = tl.load(B0 + b_offset + ((start_m * BLOCK_M + b_ptr_offsets_m)
                      * stride_b0m)[:, None] + start_n // BLOCK_N)
-        qk += (b0 + b1)
+        qk += ((b0 + b1) * 1.44269504)
 
         # -- compute scaling constant ---
         m_i_new = tl.maximum(m_i, tl.max(qk, 1))
@@ -198,6 +198,7 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
     P_SEQ = 0 if q.shape[-2] == k.shape[-2] else k.shape[-2] - q.shape[-2]
     assert P_SEQ == 0
     assert rel_h_w.is_contiguous(), str(rel_h_w.stride())
+    OUT_DTYPE = tl.float16 if q.dtype == torch.float16 else tl.bfloat16
     _fwd_kernel_aligned[grid](
         q, k, v,
         rel_h_w,
@@ -212,7 +213,7 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
         q.shape[1],
         q.shape[2],
         P_SEQ,
-        OUT_DTYPE=tl.float16 if q.dtype == torch.float16 else tl.bfloat16,
+        OUT_DTYPE=OUT_DTYPE,
         BIAS_LAST_SIZE=(rel_h_w.size(-1) // 2),
         B0_NUMEL=rel_h_w.size(-1),
         BLOCK_M=BLOCK_M,
@@ -346,7 +347,8 @@ def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
     def kernel_guards(q_, k_, v_):
         return (q_.dtype == torch.bfloat16 or q_.dtype == torch.float16) and q_.dtype == k_.dtype and k_.dtype == v_.dtype and USE_CUSTOM_KERNEL
     # vit_b and vit_l
-    if q_size_2_padded == 0 and q_.size(-1) == 64 and kernel_guards(q_, k_, v_):
+    # TODO: This kernel currently does not produce correct results for batch size 1 for this case
+    if q_.size(0) > 1 and q_size_2_padded == 0 and q_.size(-1) == 64 and kernel_guards(q_, k_, v_):
         rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
         o = torch.ops.customflash.custom_flash_aligned(
             q_, k_, v_, rel_h_w, sm_scale)
