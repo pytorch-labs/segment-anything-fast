@@ -114,7 +114,7 @@ def _fwd_kernel_aligned(
         # Bias
         b0 = tl.load(B0 + b_offset + ((start_m * BLOCK_M + b_ptr_offsets_m)
                      * stride_b0m)[:, None] + start_n // BLOCK_N)
-        qk += (b0 + b1)
+        qk += ((b0 + b1) * 1.44269504)
 
         # -- compute scaling constant ---
         m_i_new = tl.maximum(m_i, tl.max(qk, 1))
@@ -347,7 +347,8 @@ def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
     def kernel_guards(q_, k_, v_):
         return (q_.dtype == torch.bfloat16 or q_.dtype == torch.float16) and q_.dtype == k_.dtype and k_.dtype == v_.dtype and USE_CUSTOM_KERNEL
     # vit_b and vit_l
-    if q_size_2_padded == 0 and q_.size(-1) == 64 and kernel_guards(q_, k_, v_):
+    # TODO: This kernel currently does not produce correct results for batch size 1 for this case
+    if q_.size(0) > 1 and q_size_2_padded == 0 and q_.size(-1) == 64 and kernel_guards(q_, k_, v_):
         rel_h_w = torch.cat([rel_h_.squeeze(-1), rel_w_.squeeze(-2)], dim=-1)
         o = torch.ops.customflash.custom_flash_aligned(
             q_, k_, v_, rel_h_w, sm_scale)
