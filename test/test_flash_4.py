@@ -40,3 +40,5 @@ def test_op(batch, head, seq_len, hidden_dim, dtype=torch.float16):
     print(
         torch.nn.functional.cosine_similarity(ref_out.ravel(), tri_out.ravel(), dim=-1)
     )
+
+test_op(1, 16, 4096, 80, dtype=torch.float16)

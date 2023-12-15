@@ -107,7 +107,7 @@ def _fwd_kernel_aligned(
         v = tl.load(V_block_ptr)
         # -- compute qk ---
         qk = tl.zeros([BLOCK_M, BLOCK_N], dtype=OUT_DTYPE)
-        qk += tl.dot(q, k, out_dtype=OUT_DTYPE)
+        qk += tl.dot(q, k) #, out_dtype=OUT_DTYPE)
 
         # -- compute rel_h[:, None] + rel_w[None, :] bias ---
 
@@ -198,6 +198,7 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
     P_SEQ = 0 if q.shape[-2] == k.shape[-2] else k.shape[-2] - q.shape[-2]
     assert P_SEQ == 0
     assert rel_h_w.is_contiguous(), str(rel_h_w.stride())
+    OUT_DTYPE = tl.float16 if q.dtype == torch.float16 else tl.bfloat16
     _fwd_kernel_aligned[grid](
         q, k, v,
         rel_h_w,
@@ -212,7 +213,7 @@ def _attention_rel_h_rel_w_kernel_aligned_device(q, k, v, rel_h_w, sm_scale, o,
         q.shape[1],
         q.shape[2],
         P_SEQ,
-        OUT_DTYPE=tl.float16 if q.dtype == torch.float16 else tl.bfloat16,
+        OUT_DTYPE=OUT_DTYPE,
         BIAS_LAST_SIZE=(rel_h_w.size(-1) // 2),
         B0_NUMEL=rel_h_w.size(-1),
         BLOCK_M=BLOCK_M,
