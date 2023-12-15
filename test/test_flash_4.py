@@ -39,6 +39,5 @@ def test_op(batch, head, seq_len, hidden_dim, dtype):
     torch.testing.assert_close(ref_out, tri_out, rtol=1e-3, atol=1e-3)
 
 for batch, (head, seq_len), dtype in itertools.product([1, 8], [(16, 80), (12, 64)], [torch.float16, torch.bfloat16]):
-# for batch, (head, seq_len), dtype in itertools.product([1, 8], [(16, 80)], [torch.float16, torch.bfloat16]):
     print(f"batch: {batch} head: {head} seq_len: {seq_len} dtype: {dtype}")
     test_op(batch, head, 4096, seq_len, dtype)
