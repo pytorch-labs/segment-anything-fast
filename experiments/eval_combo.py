@@ -289,7 +289,7 @@ def run(
     profile_top=False,
     memory_path=None,
     use_local_sam_fork=False,
-    use_compiler_settings=False,
+    use_compiler_settings=True,
 ):
     from torch._inductor import config as inductorconfig
     inductorconfig.triton.unique_kernel_names = True
@@ -298,6 +298,7 @@ def run(
     if use_compiler_settings:
         # inductorconfig.fx_graph_cache = True # seems to slow performance
         inductorconfig.epilogue_fusion = False
+        torch._dynamo.config.automatic_dynamic_shapes = False
         inductorconfig.coordinate_descent_tuning = True
         inductorconfig.coordinate_descent_check_all_directions = True
 
@@ -336,7 +337,13 @@ def run(
     for block in predictor.model.image_encoder.blocks:
         block.attn.use_rel_pos = use_rel_pos
 
-    if compress == "dynamic_quant":
+    if compress == "auto_quant":
+        from torchao.quantization.quant_api import do_autoquant
+        example_input = torch.randn((16, 3, 1024, 1024), dtype=use_half, device="cuda")
+        inductorconfig.force_fuse_int_mm_with_mul = True
+        inductorconfig.use_mixed_mm = True
+        do_autoquant(predictor.model.image_encoder, example_input)
+    elif compress == "dynamic_quant":
         from torchao.quantization import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
         inductorconfig.force_fuse_int_mm_with_mul = True
