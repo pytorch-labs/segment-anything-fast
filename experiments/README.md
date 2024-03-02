@@ -13,6 +13,7 @@ wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
 Need to download
 
 wget http://images.cocodataset.org/zips/val2017.zip
+
 wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
 
 ## Folder structure of experimental data
