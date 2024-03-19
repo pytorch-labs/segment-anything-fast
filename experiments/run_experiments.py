@@ -42,7 +42,7 @@ def run_experiment(experiments_data,
                    extra_args=None,
                    print_header=False,
                    capture_output=True,
-                   limit=None,
+                   limit=1024,
                    profile_path=None,
                    profile_top=False,
                    memory_path=None):
@@ -181,6 +181,11 @@ def run(batch_size,
         rt("sparse",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=True, compress="sparse")
 
     if run_experiments:
+        # rexp("base",  "local-fork",     use_half="bfloat16")
+        # rexp("compile",  "local-fork",     use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), print_header=print_header)
+        # rexp("int8",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="dynamic_quant")
+        rexp("autoquant",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="autoquant")
+        return
         if local_fork_only:
             rexp("fp32",     "local-fork",     print_header=print_header)
             rexp("bf16",     "local-fork",     use_half="bfloat16")
