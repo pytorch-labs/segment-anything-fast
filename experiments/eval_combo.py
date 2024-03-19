@@ -5,6 +5,7 @@ from metrics import calculate_miou, create_result_entry
 from data import build_data, setup_coco_img_ids
 import math
 import segment_anything_fast
+import torchao
 
 torch._dynamo.config.cache_size_limit = 50000
 
@@ -337,12 +338,11 @@ def run(
     for block in predictor.model.image_encoder.blocks:
         block.attn.use_rel_pos = use_rel_pos
 
-    if compress == "auto_quant":
-        from torchao.quantization.quant_api import do_autoquant
-        example_input = torch.randn((16, 3, 1024, 1024), dtype=use_half, device="cuda")
+    if compress == "autoquant":
+        example_input = torch.randn((batch_size, 3, 1024, 1024), dtype=use_half, device="cuda")
         inductorconfig.force_fuse_int_mm_with_mul = True
         inductorconfig.use_mixed_mm = True
-        do_autoquant(predictor.model.image_encoder, example_input)
+        torchao.autoquant(predictor.model.image_encoder, example_input, mode=["interpolate", .5])
     elif compress == "dynamic_quant":
         from torchao.quantization import apply_dynamic_quant
         apply_dynamic_quant(predictor.model.image_encoder)
