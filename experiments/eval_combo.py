@@ -38,7 +38,7 @@ def get_features_batch(encoder, input_image_batch, pad_input_image_batch, batch_
         return features_batch[:input_image_batch.size(0)]
     return encoder(input_image_batch)
 
-def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_batch):
+def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_batch, run_autoquant=False):
     encoder = predictor.model.image_encoder
     device = predictor.device
 
@@ -71,6 +71,11 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
 
     with torch.autograd.profiler.record_function("timed region"):
         with torch.autograd.profiler.record_function("image encoder"):
+            if run_autoquant:
+                from torchao import autoquant
+                print("RUNNING AUTOQUANT")
+                autoquant(encoder, input_image_batch)
+                print("DONE RUNNING AUTOQUANT")
             features_batch = encoder(input_image_batch)
             features_batch = features_batch[:orig_input_image_batch_size]
 
@@ -98,7 +103,8 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
         elapsed_time = start_event.elapsed_time(end_event)
     return sum(result_batch, []), orig_input_image_batch_size, elapsed_time
 
-def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
+def build_results_batch(predictor, batch, batch_size, pad_input_image_batch, run_autoquant=False):
+    assert not run_autoquant
     encoder = predictor.model.image_encoder
     device = predictor.device
 
@@ -171,7 +177,8 @@ def build_results(batched_data_iter,
                   use_compile_decoder,
                   use_nested_tensor,
                   pad_input_image_batch,
-                  use_fullgraph=False):
+                  use_fullgraph=False,
+                  compress=None):
 
     # TODO: Re-enable this for datapoints
     assert not use_compile_decoder
@@ -192,11 +199,13 @@ def build_results(batched_data_iter,
         with torch.no_grad():
             if batch_idx == 0:
                 with torch.autograd.profiler.record_function("compilation and warmup"):
-                    if str(use_compile) != "False":
-                        predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile, fullgraph=use_fullgraph)
                     # Run first batch a few times for warmup and exclude it from the final timings
-                    for _ in range(3):
-                        _ = batch_runner(predictor, batch, batch_size, pad_input_image_batch)
+                    for i in range(3):
+                        if compress is None and i == 0:
+                            continue
+                        _ = batch_runner(predictor, batch, batch_size, pad_input_image_batch, run_autoquant=(i==0))
+                        if i == 0 and str(use_compile) != "False":
+                            predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile, fullgraph=use_fullgraph)
             result_batch, num_datapoints, kernel_time = batch_runner(predictor, batch, batch_size, pad_input_image_batch)
             if result_batch is not None:
                 results += result_batch
@@ -338,8 +347,9 @@ def run(
 
     if compress == "dynamic_quant":
         from torchao.quantization import apply_dynamic_quant
-        apply_dynamic_quant(predictor.model.image_encoder)
+        # apply_dynamic_quant(predictor.model.image_encoder)
         inductorconfig.force_fuse_int_mm_with_mul = True
+        inductorconfig.use_mixed_mm = True
     elif compress == "static_quant":
         from segment_anything_fast.static_quant import apply_static_quant
         apply_static_quant(predictor.model.image_encoder)
@@ -414,7 +424,8 @@ def run(
                                                               use_compile,
                                                               use_compile_decoder,
                                                               use_nested_tensor,
-                                                              pad_input_image_batch)
+                                                              pad_input_image_batch,
+                                                              compress=compress)
 
     if compress == "static_quant":
         from static_quant import get_x_absmax
