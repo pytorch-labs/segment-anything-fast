@@ -182,23 +182,22 @@ def run(batch_size,
 
     if run_experiments:
         if local_fork_only:
-        #     rexp("fp32",     "local-fork",     print_header=print_header)
-        #     rexp("bf16",     "local-fork",     use_half="bfloat16")
+            rexp("fp32",     "local-fork",     print_header=print_header)
+            rexp("bf16",     "local-fork",     use_half="bfloat16")
             rexp("compile",  "local-fork",     use_half="bfloat16",  use_compile="max-autotune")
-        #     # The local fork already uses SDPA + Triton for all of the above experiments.
-        #     # local_fork_only mainly exists to ablate the order in which we apply
-        #     # techniques and cannot be used to reproduce the experimental results
+            # The local fork already uses SDPA + Triton for all of the above experiments.
+            # local_fork_only mainly exists to ablate the order in which we apply
+            # techniques and cannot be used to reproduce the experimental results
         else:
-        #     rexp("fp32",     "default",      print_header=print_header)
-        #     rexp("bf16",     "codesign",     use_half="bfloat16")
-        #     rexp("compile",  "codesign",     use_half="bfloat16",  use_compile="max-autotune")
-        #     rexp("SDPA",     "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
+        #    rexp("fp32",     "default",      print_header=print_header)
+        #    rexp("bf16",     "codesign",     use_half="bfloat16")
+        #    rexp("compile",  "codesign",     use_half="bfloat16",  use_compile="max-autotune")
+        #    rexp("SDPA",     "sdpa-decoder", use_half="bfloat16",  use_compile="max-autotune")
             rexp("Triton",   "local-fork",   use_half="bfloat16",  use_compile="max-autotune")
         if batch_size > 1:
             rexp("NT",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1))
-        # rexp("int8",         "local-fork",   use_half="bfloat16",                              use_nested_tensor=(batch_size > 1), compress="dynamic_quant")
         rexp("int8",         "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="dynamic_quant")
-        # rexp("sparse",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="sparse")
+        rexp("sparse",       "local-fork",   use_half="bfloat16",  use_compile="max-autotune", use_nested_tensor=(batch_size > 1), compress="sparse")
 
 
 if __name__ == '__main__':

@@ -201,9 +201,7 @@ def build_results(batched_data_iter,
                 with torch.autograd.profiler.record_function("compilation and warmup"):
                     # Run first batch a few times for warmup and exclude it from the final timings
                     for i in range(3):
-                        if compress is None and i == 0:
-                            continue
-                        _ = batch_runner(predictor, batch, batch_size, pad_input_image_batch, run_autoquant=(i==0))
+                        _ = batch_runner(predictor, batch, batch_size, pad_input_image_batch, run_autoquant=(i==0 and (compress is not None)))
                         if i == 0 and str(use_compile) != "False":
                             predictor.model.image_encoder = torch.compile(predictor.model.image_encoder, mode=use_compile, fullgraph=use_fullgraph)
             result_batch, num_datapoints, kernel_time = batch_runner(predictor, batch, batch_size, pad_input_image_batch)
