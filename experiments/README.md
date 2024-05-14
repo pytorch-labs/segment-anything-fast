@@ -37,6 +37,7 @@ These  experiments were run on an Amazon p4d.24xlarge instance. See the Product 
 - 1152 GiB of RAM
 - Software
 
+Meanwhile, these experiments (fp32, bf16, compile, SDPA, Triton, NT) can run on CPU platform as well. Experiment results will be shown in the near future.
 
 ### Versions
 
@@ -47,11 +48,17 @@ These  experiments were run on an Amazon p4d.24xlarge instance. See the Product 
 ### Installation instructions
 
 ```
-$ conda create -n nightly20231117py310
-$ conda activate nightly20231117py310
+$ conda create -n nightlypy310
+$ conda activate nightlypy310
 $ conda install python=3.10
-$ pip install https://download.pytorch.org/whl/nightly/cu121/torch-2.2.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
-$ pip install https://download.pytorch.org/whl/nightly/cu121/torchvision-0.17.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
+For GPU,
+- $ pip install https://download.pytorch.org/whl/nightly/cu121/torch-2.2.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
+- $ pip install https://download.pytorch.org/whl/nightly/cu121/torchvision-0.17.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
+For CPU,
+- $ pip install https://download.pytorch.org/whl/nightly/cpu/torch-2.4.0.dev20240509%2Bcpu-cp310-cp310-linux_x86_64.whl
+- $ pip install https://download.pytorch.org/whl/nightly/cpu/torchvision-0.19.0.dev20240509%2Bcpu-cp310-cp310-linux_x86_64.whl
+- $ pip install triton
+
 $ git clone https://github.com/cpuhrsch/segment-anything.git
 $ cd segment-anything
 $ pip install -e .
@@ -66,8 +73,14 @@ If you plan to run the scripts that run the experiments from segment-anything-fa
 
 ### How to run experiments
 
+For GPU platform,
 ```
 $ python run_experiments.py 16 vit_b <pytorch_github> <segment-anything_github> <path_to_experiments_data> --run-experiments --num-workers 32
+```
+
+For CPU platform, set SEGMENT_ANYTHING_FAST_USE_FLASH_4 as 0, since Custom flash attention kernels were written specifically for A100.
+```
+$ SEGMENT_ANYTHING_FAST_USE_FLASH_4=0 python run_experiments.py 16 vit_b <pytorch_github> <segment-anything_github> <path_to_experiments_data> --run-experiments --num-workers 32 --device cpu
 ```
 
 If at any point you run into issue, please note that you can increase verbosity by adding `--capture_output False` to above command. Also, please don't hesitate to open an issue.

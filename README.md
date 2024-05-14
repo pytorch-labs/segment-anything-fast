@@ -17,6 +17,10 @@ For example:
 ```
 pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu121
 ```
+or
+```
+pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu
+```
 
 Installation instructions vary by platform. Please see the website https://pytorch.org/
 
