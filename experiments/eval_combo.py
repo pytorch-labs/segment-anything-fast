@@ -5,6 +5,7 @@ from metrics import calculate_miou, create_result_entry
 from data import build_data, setup_coco_img_ids
 import math
 import segment_anything_fast
+import time
 
 torch._dynamo.config.cache_size_limit = 50000
 
@@ -64,10 +65,13 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
     # We explicitly exclude data transfers from the timing to focus
     # only on the kernel performance.
     # Next we synchronize and set two events to start timing.
-    torch.cuda.synchronize()
-    start_event = torch.cuda.Event(enable_timing=True)
-    end_event = torch.cuda.Event(enable_timing=True)
-    start_event.record()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
+    else:
+        t0 = time.time()
 
     with torch.autograd.profiler.record_function("timed region"):
         with torch.autograd.profiler.record_function("image encoder"):
@@ -93,9 +97,12 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
         # the amount of time spent on the GPU. This is a fairly tight measurement
         # around the launched GPU kernels and excludes data movement from host
         # to device.
-        end_event.record()
-        torch.cuda.synchronize()
-        elapsed_time = start_event.elapsed_time(end_event)
+        if torch.cuda.is_available():
+            end_event.record()
+            torch.cuda.synchronize()
+            elapsed_time = start_event.elapsed_time(end_event)
+        else:
+            elapsed_time = time.time() - t0
     return sum(result_batch, []), orig_input_image_batch_size, elapsed_time
 
 def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
@@ -123,10 +130,13 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
     # We explicitly exclude data transfers from the timing to focus
     # only on the kernel performance.
     # Next we synchronize and set two events to start timing.
-    torch.cuda.synchronize()
-    start_event = torch.cuda.Event(enable_timing=True)
-    end_event = torch.cuda.Event(enable_timing=True)
-    start_event.record()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
+    else:
+        t0 = time.time()
 
     with torch.autograd.profiler.record_function("timed region"):
         with torch.autograd.profiler.record_function("image encoder"):
@@ -157,9 +167,12 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
         # the amount of time spent on the GPU. This is a fairly tight measurement
         # around the launched GPU kernels and excludes data movement from host
         # to device.
-        end_event.record()
-        torch.cuda.synchronize()
-        elapsed_time = start_event.elapsed_time(end_event)
+        if torch.cuda.is_available():
+            end_event.record()
+            torch.cuda.synchronize()
+            elapsed_time = start_event.elapsed_time(end_event)
+        else:
+            elapsed_time = time.time() - t0
     return result_batch, orig_input_image_batch_size, elapsed_time
 
 
@@ -290,6 +303,7 @@ def run(
     memory_path=None,
     use_local_sam_fork=False,
     use_compiler_settings=False,
+    device="cuda"
 ):
     from torch._inductor import config as inductorconfig
     inductorconfig.triton.unique_kernel_names = True
@@ -327,7 +341,7 @@ def run(
     else:
         from segment_anything import sam_model_registry, SamPredictor
     checkpoint_path = model_type_to_checkpoint[sam_model_type]
-    sam = sam_model_registry[sam_model_type](checkpoint=checkpoint_path).cuda()
+    sam = sam_model_registry[sam_model_type](checkpoint=checkpoint_path).to(torch.device(device))
     predictor = SamPredictor(sam)
 
     from segment_anything_fast import tools
