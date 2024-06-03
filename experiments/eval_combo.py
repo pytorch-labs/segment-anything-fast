@@ -6,6 +6,7 @@ from data import build_data, setup_coco_img_ids
 import math
 import segment_anything_fast
 import time
+import resource
 
 torch._dynamo.config.cache_size_limit = 50000
 
@@ -257,7 +258,10 @@ def profile_top_runner(fn, *args, **kwargs):
                         torch.profiler.ProfilerActivity.CUDA],
             record_shapes=True) as prof:
         result = fn(*args, **kwargs)
-    print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
+    if torch.cuda.is_available():
+        print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
+    else:
+        print(prof.key_averages().table(sort_by="self_cpu_time_total", row_limit=-1))
     return result
 
 
@@ -444,15 +448,22 @@ def run(
         batch_ms_batch_size = (avg_ms_per_img * num_images) / num_batches / batch_size
 
     mIoU = calculate_miou(results, mask_debug_out_dir, True, cat_id_to_cat)
-    max_memory_allocated_bytes = torch.cuda.max_memory_allocated()
-    _, total_memory = torch.cuda.mem_get_info()
-    max_memory_allocated_percentage = int(100 * (max_memory_allocated_bytes / total_memory))
-    max_memory_allocated_bytes = max_memory_allocated_bytes >> 20
+    if torch.cuda.is_available():
+        max_memory_allocated_bytes = torch.cuda.max_memory_allocated()
+        _, total_memory = torch.cuda.mem_get_info()
+        max_memory_allocated_percentage = int(100 * (max_memory_allocated_bytes / total_memory))
+        max_memory_allocated_bytes = max_memory_allocated_bytes >> 20
+    else:
+        import psutil
+        total_memory = psutil.virtual_memory().total
+        max_memory_allocated_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        max_memory_allocated_percentage = int(100 * (max_memory_allocated_bytes / (total_memory >> 10)))
+        max_memory_allocated_bytes = max_memory_allocated_bytes >> 10
 
     if print_header:
-        print(",".join(["sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s(avg)", "batch_ms(avg)/batch_size", "mIoU", "use_compile",
+        print(",".join(["device", "sam_model_type", "batch_size", "memory(MiB)", "memory(%)", "img_s(avg)", "batch_ms(avg)/batch_size", "mIoU", "use_compile",
               "use_half", "compress", "epilogue_fusion_first", "use_compile_decoder", "use_nested_tensor", "use_rel_pos", "pad_input_image_batch", "num_workers", "num_batches", "num_images", "profile_path", "memory_path"]))
-    print(",".join(map(str, [sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, batch_ms_batch_size, mIoU, use_compile,
+    print(",".join(map(str, [device, sam_model_type, batch_size, max_memory_allocated_bytes, max_memory_allocated_percentage, img_s, batch_ms_batch_size, mIoU, use_compile,
           use_half, compress, epilogue_fusion_first, use_compile_decoder, use_nested_tensor, use_rel_pos, pad_input_image_batch, num_workers, num_batches, num_images, profile_path, memory_path])))
 
 

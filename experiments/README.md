@@ -55,9 +55,9 @@ For GPU,
 - $ pip install https://download.pytorch.org/whl/nightly/cu121/torch-2.2.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
 - $ pip install https://download.pytorch.org/whl/nightly/cu121/torchvision-0.17.0.dev20231117%2Bcu121-cp310-cp310-linux_x86_64.whl
 For CPU,
-- $ pip install https://download.pytorch.org/whl/nightly/cpu/torch-2.4.0.dev20240509%2Bcpu-cp310-cp310-linux_x86_64.whl
-- $ pip install https://download.pytorch.org/whl/nightly/cpu/torchvision-0.19.0.dev20240509%2Bcpu-cp310-cp310-linux_x86_64.whl
-- $ pip install triton
+- $ pip install https://download.pytorch.org/whl/nightly/cpu/torch-2.4.0.dev20240530%2Bcpu-cp310-cp310-linux_x86_64.whl
+- $ pip install https://download.pytorch.org/whl/nightly/cpu/torchvision-0.19.0.dev20240530%2Bcpu-cp310-cp310-linux_x86_64.whl
+- $ install triton based on https://github.com/triton-lang/triton?tab=readme-ov-file#quick-installation
 
 $ git clone https://github.com/cpuhrsch/segment-anything.git
 $ cd segment-anything
