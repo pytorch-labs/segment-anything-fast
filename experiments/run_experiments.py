@@ -46,7 +46,8 @@ def run_experiment(experiments_data,
                    profile_path=None,
                    profile_top=False,
                    memory_path=None,
-                   device="cuda"):
+                   device="cuda",
+                   num_iter=None):
     root_cmd = ["python", "eval_combo.py",
                 "--coco_root_dir",
                 f"{experiments_data}/datasets/coco2017",
@@ -86,6 +87,8 @@ def run_experiment(experiments_data,
     if extra_args is None:
         extra_args = []
     args = args + ["--device", device]
+    if num_iter is not None:
+        args = args + ["--num_iter", str(num_iter)]
     args = args + extra_args
     if print_header:
         args = args + ["--print_header", "True"]
@@ -148,7 +151,8 @@ def run(batch_size,
         print_header=True,
         capture_output=True,
         local_fork_only=False,
-        device="cuda"):
+        device="cuda",
+        num_iter=None):
 
     assert model == "vit_b" or model == "vit_h"
 
@@ -159,7 +163,8 @@ def run(batch_size,
                              batch_size=batch_size,
                              num_workers=num_workers,
                              capture_output=capture_output,
-                             device=device)
+                             device=device,
+                             num_iter=num_iter)
 
     print_header = True
     if run_traces:

@@ -185,7 +185,8 @@ def build_results(batched_data_iter,
                   use_compile_decoder,
                   use_nested_tensor,
                   pad_input_image_batch,
-                  use_fullgraph=False):
+                  use_fullgraph=False,
+                  num_iter=None):
 
     # TODO: Re-enable this for datapoints
     assert not use_compile_decoder
@@ -229,6 +230,8 @@ def build_results(batched_data_iter,
         else:
             partial_batch = True
         batch_idx += 1
+        if num_iter is not None and batch_idx > num_iter:
+            break
 
     avg_ms_per_img = None
     if num_images > 0:
@@ -307,7 +310,8 @@ def run(
     memory_path=None,
     use_local_sam_fork=False,
     use_compiler_settings=False,
-    device="cuda"
+    device="cuda",
+    num_iter=None
 ):
     from torch._inductor import config as inductorconfig
     inductorconfig.triton.unique_kernel_names = True
@@ -432,7 +436,8 @@ def run(
                                                               use_compile,
                                                               use_compile_decoder,
                                                               use_nested_tensor,
-                                                              pad_input_image_batch)
+                                                              pad_input_image_batch,
+                                                              num_iter=num_iter)
 
     if compress == "static_quant":
         from static_quant import get_x_absmax

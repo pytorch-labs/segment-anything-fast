@@ -80,7 +80,7 @@ $ python run_experiments.py 16 vit_b <pytorch_github> <segment-anything_github> 
 
 For CPU platform, set SEGMENT_ANYTHING_FAST_USE_FLASH_4 as 0, since Custom flash attention kernels were written specifically for A100.
 ```
-$ SEGMENT_ANYTHING_FAST_USE_FLASH_4=0 python run_experiments.py 16 vit_b <pytorch_github> <segment-anything_github> <path_to_experiments_data> --run-experiments --num-workers 32 --device cpu
+$ SEGMENT_ANYTHING_FAST_USE_FLASH_4=0 python run_experiments.py 16 vit_b <pytorch_github> <segment-anything_github> <path_to_experiments_data> --run-experiments --num-workers 32 --device cpu --num_iter <numbers_of_iterations>
 ```
 
 If at any point you run into issue, please note that you can increase verbosity by adding `--capture_output False` to above command. Also, please don't hesitate to open an issue.
