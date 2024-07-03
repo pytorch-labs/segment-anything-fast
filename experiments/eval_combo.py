@@ -103,7 +103,7 @@ def build_results_batch_nested(predictor, batch, batch_size, pad_input_image_bat
             torch.cuda.synchronize()
             elapsed_time = start_event.elapsed_time(end_event)
         else:
-            elapsed_time = time.time() - t0
+            elapsed_time = (time.time() - t0) * 1000
     return sum(result_batch, []), orig_input_image_batch_size, elapsed_time
 
 def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
@@ -173,7 +173,7 @@ def build_results_batch(predictor, batch, batch_size, pad_input_image_batch):
             torch.cuda.synchronize()
             elapsed_time = start_event.elapsed_time(end_event)
         else:
-            elapsed_time = time.time() - t0
+            elapsed_time = (time.time() - t0) * 1000
     return result_batch, orig_input_image_batch_size, elapsed_time
 
 
