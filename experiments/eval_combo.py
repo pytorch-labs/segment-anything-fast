@@ -365,7 +365,7 @@ def run(
         weights_path = Path(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
         if weights_path.exists() and weights_path.is_file():
             print("Loading static quantization weights")
-            weights = torch.load(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk")
+            weights = torch.load(f"static_quant_scalars/{sam_model_type}_{batch_size}_static_quant_weights.ptk", weights_only=True)
             from static_quant import set_x_absmax
             set_x_absmax(predictor.model.image_encoder, weights)
     elif compress == "sparse":
