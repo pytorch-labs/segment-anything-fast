@@ -52,7 +52,7 @@ Please also note that the first time you're running this model you'll likely nee
 
 If you'd like to see the details on how to reproduce all results, please see the README in the experiments folder above.
 
-Please don't be shy to open a Github issue if you're missing functionality or find an issue. Thank you.
+Please don't be shy to open a GitHub issue if you're missing functionality or find an issue. Thank you.
 
 ## Results
 
