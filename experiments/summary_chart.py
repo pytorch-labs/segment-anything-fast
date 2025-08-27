@@ -10,6 +10,8 @@ def make_sub_chart(batch_size_idx, techniques, df, ax, title, category_column, v
     y_values = []
     bar_colors = []
     x_idx = 0
+
+    #Prepare data for plotting on chart
     for key in techniques.keys():
         if key in df[category_column].tolist():
             x_values.append(key)
@@ -19,21 +21,27 @@ def make_sub_chart(batch_size_idx, techniques, df, ax, title, category_column, v
         else:
             x_values.append(key)
             y_values.append(0)
+            
     x_coords = []
     for name in df[category_column]:
         if name in techniques:
             x_coords.append(techniques[name])
+
+    # Plot bar chart on provided axis
     ax.bar(x_values, y_values, label=label, color=bar_colors)
 
     # Customize the chart labels and title
     ax.set_xlabel(category_column)
     ax.set_ylabel(value_column)
     ax.set_title(title)
+
+    # Specify y-axis limits
     if ylim_low is None:
         assert ylim_high is None
     else:
         ax.set_ylim(ylim_low, ylim_high)
 
+    # Format dashed lines
     tick_positions = ax.get_yticks()
     for tick in tick_positions:
         ax.axhline(y=tick, color='gray', linestyle='--', alpha=0.7)
