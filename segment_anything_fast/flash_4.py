@@ -329,7 +329,11 @@ def _attention_rel_h_rel_w_kernel_aligned(q, k, v, rel_h_w, sm_scale):
     return o
 
 
-USE_CUSTOM_KERNEL = bool(int(os.environ.get('SEGMENT_ANYTHING_FAST_USE_FLASH_4', 1)))
+USE_CUSTOM_KERNEL = (
+    bool(int(os.environ.get('SEGMENT_ANYTHING_FAST_USE_FLASH_4', 1)))
+    and hasattr(tl, "make_block_ptr")
+    and hasattr(tl, "advance")
+)
 
 
 def _attention_rel_h_rel_w(q_, k_, v_, rel_h_, rel_w_):
